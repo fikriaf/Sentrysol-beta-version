@@ -97,6 +97,26 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-poppins;
+  }
+}
+
+@layer utilities {
+  .gradient-text {
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.00) 0%, rgba(255, 255, 255, 0.46) 50%, rgba(255, 255, 255, 0.00) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .gradient-section-text {
+    background: linear-gradient(90deg, #A5C9CA 0%, #E7F6F2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .main-gradient {
+    background: linear-gradient(180deg, #000 0%, #395B64 50%, #395B64 75%, #000 100%);
   }
 }
