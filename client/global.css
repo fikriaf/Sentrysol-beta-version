@@ -3,11 +3,7 @@
 @tailwind utilities;
 
 @layer base {
-  /**
-   * Tailwind CSS theme
-   * tailwind.config.ts expects the following color variables to be expressed as HSL values.
-   * A different format will require also updating the theme in tailwind.config.ts.
-  */
+  /* SentrySol Design System Colors */
   :root {
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
