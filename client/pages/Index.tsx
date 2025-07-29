@@ -1,4 +1,5 @@
-import { Search, X, Shield, Eye, Bug } from "lucide-react";
+import { Search, X, Shield, Eye, Bug, Menu } from "lucide-react";
+import { useState } from "react";
 
 export default function Index() {
   return (
