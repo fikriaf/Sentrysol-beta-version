@@ -308,14 +308,7 @@ export default function Index() {
             </div>
           </div>
 
-          {/* Background image */}
-          <div className="hidden lg:block absolute right-0 top-0 w-1/2 h-full opacity-30">
-            <img 
-              src="https://api.builder.io/api/v1/image/assets/TEMP/8013e91495f1b7f65a4ae0271db823785859a912?width=1178" 
-              alt="Data visualization background" 
-              className="w-full h-full object-cover"
-            />
-          </div>
+
         </div>
       </section>
 
