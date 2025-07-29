@@ -2,6 +2,8 @@ import { Search, X, Shield, Eye, Bug, Menu } from "lucide-react";
 import { useState } from "react";
 
 export default function Index() {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
   return (
     <div className="min-h-screen main-gradient relative overflow-x-hidden">
       {/* Background Pattern */}
