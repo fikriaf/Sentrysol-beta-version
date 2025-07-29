@@ -8,9 +8,9 @@ export default function Index() {
     <div className="min-h-screen main-gradient relative">
       {/* Background Pattern */}
       <div className="absolute top-0 left-0 w-full h-full z-[1] opacity-30">
-        <img 
-          src="https://api.builder.io/api/v1/image/assets/TEMP/c825e8e63e3c0adb94bef5f03f13e3ea4131deac?width=3842" 
-          alt="Line pattern background" 
+        <img
+          src="https://api.builder.io/api/v1/image/assets/TEMP/c825e8e63e3c0adb94bef5f03f13e3ea4131deac?width=3842"
+          alt="Line pattern background"
           className="w-full h-full object-cover"
         />
       </div>
@@ -20,9 +20,9 @@ export default function Index() {
         <div className="flex flex-col md:flex-row items-center justify-between w-full h-auto px-4 py-4 rounded-3xl md:rounded-full border border-white/10 bg-white/10 backdrop-blur-sm gap-4 md:gap-0">
           {/* Mobile Logo */}
           <div className="flex items-center gap-3 md:hidden">
-            <img 
-              src="https://api.builder.io/api/v1/image/assets/TEMP/3249d81bd5a0516fe5c613581be785b53ef9877e?width=130" 
-              alt="SentrySol Logo" 
+            <img
+              src="https://api.builder.io/api/v1/image/assets/TEMP/3249d81bd5a0516fe5c613581be785b53ef9877e?width=130"
+              alt="SentrySol Logo"
               className="w-8 h-8"
             />
             <span className="text-white font-poppins text-xl font-bold leading-none">
@@ -35,9 +35,9 @@ export default function Index() {
             <div className="hidden md:flex items-center gap-8 lg:gap-12">
               {/* Logo */}
               <div className="flex items-center gap-3">
-                <img 
-                  src="https://api.builder.io/api/v1/image/assets/TEMP/3249d81bd5a0516fe5c613581be785b53ef9877e?width=130" 
-                  alt="SentrySol Logo" 
+                <img
+                  src="https://api.builder.io/api/v1/image/assets/TEMP/3249d81bd5a0516fe5c613581be785b53ef9877e?width=130"
+                  alt="SentrySol Logo"
                   className="w-10 h-10"
                 />
                 <span className="text-white font-poppins text-2xl lg:text-3xl font-bold leading-none">
@@ -47,16 +47,28 @@ export default function Index() {
 
               {/* Navigation Links */}
               <div className="flex items-center gap-6 lg:gap-8">
-                <a href="#" className="text-white font-poppins text-lg font-normal leading-none hover:text-white/80 transition-colors">
+                <a
+                  href="#"
+                  className="text-white font-poppins text-lg font-normal leading-none hover:text-white/80 transition-colors"
+                >
                   Products
                 </a>
-                <a href="#" className="text-white font-poppins text-lg font-normal leading-none hover:text-white/80 transition-colors">
+                <a
+                  href="#"
+                  className="text-white font-poppins text-lg font-normal leading-none hover:text-white/80 transition-colors"
+                >
                   About
                 </a>
-                <a href="#" className="text-white font-poppins text-lg font-normal leading-none hover:text-white/80 transition-colors">
+                <a
+                  href="#"
+                  className="text-white font-poppins text-lg font-normal leading-none hover:text-white/80 transition-colors"
+                >
                   Docs
                 </a>
-                <a href="#" className="text-white font-poppins text-lg font-normal leading-none hover:text-white/80 transition-colors">
+                <a
+                  href="#"
+                  className="text-white font-poppins text-lg font-normal leading-none hover:text-white/80 transition-colors"
+                >
                   Pricing
                 </a>
                 <button className="bg-white text-black font-poppins text-lg font-normal leading-none px-4 py-2 rounded-full hover:bg-white/90 transition-colors">
@@ -75,16 +87,28 @@ export default function Index() {
               </button>
               {isMobileMenuOpen && (
                 <div className="absolute top-full right-0 mt-2 bg-black/90 backdrop-blur-sm border border-white/10 rounded-2xl p-4 flex flex-col gap-4 min-w-[200px]">
-                  <a href="#" className="text-white font-poppins hover:text-white/80 transition-colors">
+                  <a
+                    href="#"
+                    className="text-white font-poppins hover:text-white/80 transition-colors"
+                  >
                     Products
                   </a>
-                  <a href="#" className="text-white font-poppins hover:text-white/80 transition-colors">
+                  <a
+                    href="#"
+                    className="text-white font-poppins hover:text-white/80 transition-colors"
+                  >
                     About
                   </a>
-                  <a href="#" className="text-white font-poppins hover:text-white/80 transition-colors">
+                  <a
+                    href="#"
+                    className="text-white font-poppins hover:text-white/80 transition-colors"
+                  >
                     Docs
                   </a>
-                  <a href="#" className="text-white font-poppins hover:text-white/80 transition-colors">
+                  <a
+                    href="#"
+                    className="text-white font-poppins hover:text-white/80 transition-colors"
+                  >
                     Pricing
                   </a>
                   <button className="bg-white text-black font-poppins text-sm font-normal leading-none px-4 py-2 rounded-full hover:bg-white/90 transition-colors">
@@ -97,8 +121,8 @@ export default function Index() {
             {/* Search Box */}
             <div className="relative w-full md:w-64 h-10">
               <div className="absolute inset-0 rounded-full border border-white/47 shadow-[0px_4px_0px_rgba(0,0,0,0.25)]"></div>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 placeholder="I'm looking for..."
                 className="absolute inset-0 bg-transparent text-white placeholder-white/60 px-4 rounded-full text-sm focus:outline-none"
               />
@@ -129,9 +153,9 @@ export default function Index() {
               {/* Description and CTA */}
               <div className="space-y-6">
                 <p className="text-white font-poppins text-lg font-normal leading-relaxed max-w-md">
-                  SentrySol is an AI-native, on-device behavioral security framework
-                  built specifically for Web3 mobile environments, initially focusing
-                  on Solana Mobile Seeker.
+                  SentrySol is an AI-native, on-device behavioral security
+                  framework built specifically for Web3 mobile environments,
+                  initially focusing on Solana Mobile Seeker.
                 </p>
                 <button className="bg-sentry-sage text-black font-poppins text-lg font-normal leading-none px-6 py-3 rounded-full hover:bg-sentry-sage/90 transition-colors">
                   Get Started
@@ -142,14 +166,14 @@ export default function Index() {
             {/* Right side - Logo */}
             <div className="flex justify-center lg:justify-end">
               <div className="relative w-80 h-80 lg:w-96 lg:h-96">
-                <img 
-                  src="https://api.builder.io/api/v1/image/assets/TEMP/63d4f60c2a192a08d444bc9ff2880fed32d0e0c0?width=1519" 
-                  alt="SentrySol logo glow" 
+                <img
+                  src="https://api.builder.io/api/v1/image/assets/TEMP/63d4f60c2a192a08d444bc9ff2880fed32d0e0c0?width=1519"
+                  alt="SentrySol logo glow"
                   className="absolute inset-0 w-full h-full object-contain"
                 />
-                <img 
-                  src="https://api.builder.io/api/v1/image/assets/TEMP/cdd82043a412ca71168235cfa284d856822ce355?width=1519" 
-                  alt="SentrySol logo" 
+                <img
+                  src="https://api.builder.io/api/v1/image/assets/TEMP/cdd82043a412ca71168235cfa284d856822ce355?width=1519"
+                  alt="SentrySol logo"
                   className="absolute inset-0 w-full h-full object-contain"
                 />
               </div>
@@ -164,7 +188,7 @@ export default function Index() {
           <h2 className="text-center font-poppins text-3xl sm:text-5xl lg:text-7xl font-normal leading-tight tracking-wide gradient-section-text mb-8">
             Intelligent Protection Right On Your Phone
           </h2>
-          
+
           <p className="text-white text-center font-poppins text-xl font-normal leading-relaxed tracking-wide max-w-4xl mx-auto mb-16">
             We introduce an AI-native, on-device behavioral security framework
             specifically engineered to protect your Web3 mobile experience.
@@ -229,7 +253,7 @@ export default function Index() {
           <h2 className="text-white text-center font-poppins text-3xl sm:text-5xl lg:text-7xl font-normal leading-tight mb-8">
             Revolutionizing Web3 Mobile Security
           </h2>
-          
+
           <p className="text-white text-center font-poppins text-xl font-normal leading-relaxed tracking-wide max-w-3xl mx-auto mb-16">
             SentrySol is strategically focused on the Solana Mobile ecosystem,
             providing native, enhanced dApp security directly integrated with
@@ -240,8 +264,6 @@ export default function Index() {
           <div className="relative max-w-6xl mx-auto">
             {/* Central blur circle */}
             <div className="hidden md:block absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 rounded-full bg-white/8 shadow-[0px_4px_4px_66px_rgba(0,0,0,0.25)] blur-[62px]"></div>
-            
-
 
             {/* Feature Labels - Grid layout */}
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-center">
@@ -278,10 +300,11 @@ export default function Index() {
                 Vision
               </h2>
               <p className="text-white font-poppins text-xl font-normal leading-relaxed tracking-wide">
-                We envision a Web3 future where users interact with decentralized
-                applications confidently and securely. SentrySol is building the
-                essential, intelligent, and privacy-preserving security layer needed
-                to unlock the full potential of Web3 on mobile devices.
+                We envision a Web3 future where users interact with
+                decentralized applications confidently and securely. SentrySol
+                is building the essential, intelligent, and privacy-preserving
+                security layer needed to unlock the full potential of Web3 on
+                mobile devices.
               </p>
             </div>
 
@@ -293,13 +316,11 @@ export default function Index() {
               <p className="text-white font-poppins text-xl font-normal leading-relaxed tracking-wide">
                 Empowering Users, Fostering trust and confidence in every Web3
                 interaction. Securing the Ecosystem, Protecting against evolving
-                threats like blind signing and wallet draining. Driving Adoption,
-                Making Web3 accessible and safe for everyone.
+                threats like blind signing and wallet draining. Driving
+                Adoption, Making Web3 accessible and safe for everyone.
               </p>
             </div>
           </div>
-
-
         </div>
       </section>
 
@@ -309,23 +330,23 @@ export default function Index() {
           <h2 className="text-center font-poppins text-3xl sm:text-5xl lg:text-7xl font-normal leading-tight tracking-wide gradient-section-text mb-16">
             Seamless Integration for Enhanced Security.
           </h2>
-          
+
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div className="order-2 lg:order-1">
-              <img 
-                src="https://api.builder.io/api/v1/image/assets/TEMP/be7adfd84f304d55c0a85f977267b56af7b1a83a?width=1846" 
-                alt="Solana Seeker phone" 
+              <img
+                src="https://api.builder.io/api/v1/image/assets/TEMP/be7adfd84f304d55c0a85f977267b56af7b1a83a?width=1846"
+                alt="Solana Seeker phone"
                 className="w-full max-w-md mx-auto h-auto object-contain"
               />
             </div>
-            
+
             <div className="order-1 lg:order-2 space-y-8">
               <p className="text-white font-poppins text-xl font-normal leading-relaxed tracking-wide">
-                SentrySol is strategically focused on the Solana Mobile ecosystem,
-                providing native, enhanced dApp security directly integrated with
-                devices like the Solana Seeker.
+                SentrySol is strategically focused on the Solana Mobile
+                ecosystem, providing native, enhanced dApp security directly
+                integrated with devices like the Solana Seeker.
               </p>
-              
+
               <button className="bg-sentry-accent/20 text-white font-poppins text-lg font-normal leading-none px-8 py-4 rounded-full hover:bg-sentry-accent/30 transition-colors">
                 Read More
               </button>
@@ -338,14 +359,14 @@ export default function Index() {
       <section className="relative z-[2] py-20 px-4">
         {/* Animation Background */}
         <div className="absolute inset-0 w-full h-full overflow-hidden opacity-30">
-          <img 
-            src="https://api.builder.io/api/v1/image/assets/TEMP/3062c5637282367d8b1d3011ade4eeae1ca4cbaf?width=3840" 
-            alt="Wave animation 1" 
+          <img
+            src="https://api.builder.io/api/v1/image/assets/TEMP/3062c5637282367d8b1d3011ade4eeae1ca4cbaf?width=3840"
+            alt="Wave animation 1"
             className="absolute inset-0 w-full h-full object-cover"
           />
-          <img 
-            src="https://api.builder.io/api/v1/image/assets/TEMP/4c4f4e121a62703a20a087eb92ff9c1ad2a18eb5?width=3840" 
-            alt="Wave animation 2" 
+          <img
+            src="https://api.builder.io/api/v1/image/assets/TEMP/4c4f4e121a62703a20a087eb92ff9c1ad2a18eb5?width=3840"
+            alt="Wave animation 2"
             className="absolute left-0 top-0 w-full h-1/2 object-cover"
           />
         </div>
@@ -366,17 +387,17 @@ export default function Index() {
 
           <div className="space-y-8">
             <div className="flex justify-center">
-              <img 
-                src="https://api.builder.io/api/v1/image/assets/TEMP/ce913d73bf4273f828f4376a9e6e3b3cb247c0e5?width=1997" 
-                alt="Seeker isolated" 
+              <img
+                src="https://api.builder.io/api/v1/image/assets/TEMP/ce913d73bf4273f828f4376a9e6e3b3cb247c0e5?width=1997"
+                alt="Seeker isolated"
                 className="w-full max-w-2xl h-auto object-contain"
               />
             </div>
 
             <div className="flex justify-center">
-              <img 
-                src="https://api.builder.io/api/v1/image/assets/TEMP/14cd9f3ea7854a53575926aa3d38067d0d9147e1?width=760" 
-                alt="Solana dApp Store Badge" 
+              <img
+                src="https://api.builder.io/api/v1/image/assets/TEMP/14cd9f3ea7854a53575926aa3d38067d0d9147e1?width=760"
+                alt="Solana dApp Store Badge"
                 className="w-full max-w-md h-auto object-contain"
               />
             </div>
@@ -391,9 +412,9 @@ export default function Index() {
             {/* Logo and Description */}
             <div className="lg:col-span-2 space-y-6">
               <div className="flex items-center gap-4">
-                <img 
-                  src="https://api.builder.io/api/v1/image/assets/TEMP/7a2765d9790496907d7a42bab916df1a729b35e2?width=78" 
-                  alt="SentrySol Logo" 
+                <img
+                  src="https://api.builder.io/api/v1/image/assets/TEMP/7a2765d9790496907d7a42bab916df1a729b35e2?width=78"
+                  alt="SentrySol Logo"
                   className="w-10 h-10"
                 />
                 <span className="text-white font-poppins text-xl font-bold leading-none">
@@ -402,9 +423,9 @@ export default function Index() {
               </div>
 
               <p className="text-white/70 font-poppins text-base font-normal leading-relaxed max-w-md">
-                SentrySol is an AI-native, on-device behavioral security framework
-                built specifically for Web3 mobile environments, initially focusing
-                on Solana Mobile Seeker.
+                SentrySol is an AI-native, on-device behavioral security
+                framework built specifically for Web3 mobile environments,
+                initially focusing on Solana Mobile Seeker.
               </p>
 
               {/* Social Icons */}
@@ -450,7 +471,11 @@ export default function Index() {
                         gradientUnits="userSpaceOnUse"
                       >
                         <stop stopColor="white" stopOpacity="0.3" />
-                        <stop offset="0.545" stopColor="white" stopOpacity="0.05" />
+                        <stop
+                          offset="0.545"
+                          stopColor="white"
+                          stopOpacity="0.05"
+                        />
                       </linearGradient>
                     </defs>
                   </svg>
@@ -464,13 +489,22 @@ export default function Index() {
                 Explore
               </h3>
               <div className="space-y-4">
-                <a href="#" className="block text-white/70 font-poppins text-base font-normal leading-relaxed hover:text-white transition-colors">
+                <a
+                  href="#"
+                  className="block text-white/70 font-poppins text-base font-normal leading-relaxed hover:text-white transition-colors"
+                >
                   Press & Media
                 </a>
-                <a href="#" className="block text-white/70 font-poppins text-base font-normal leading-relaxed hover:text-white transition-colors">
+                <a
+                  href="#"
+                  className="block text-white/70 font-poppins text-base font-normal leading-relaxed hover:text-white transition-colors"
+                >
                   Community
                 </a>
-                <a href="#" className="block text-white/70 font-poppins text-base font-normal leading-relaxed hover:text-white transition-colors">
+                <a
+                  href="#"
+                  className="block text-white/70 font-poppins text-base font-normal leading-relaxed hover:text-white transition-colors"
+                >
                   Contact
                 </a>
               </div>
@@ -482,16 +516,28 @@ export default function Index() {
                 Resources
               </h3>
               <div className="space-y-4">
-                <a href="#" className="block text-white/70 font-poppins text-base font-normal leading-relaxed hover:text-white transition-colors">
+                <a
+                  href="#"
+                  className="block text-white/70 font-poppins text-base font-normal leading-relaxed hover:text-white transition-colors"
+                >
                   Whitepaper
                 </a>
-                <a href="#" className="block text-white/70 font-poppins text-base font-normal leading-relaxed hover:text-white transition-colors">
+                <a
+                  href="#"
+                  className="block text-white/70 font-poppins text-base font-normal leading-relaxed hover:text-white transition-colors"
+                >
                   Documentation
                 </a>
-                <a href="#" className="block text-white/70 font-poppins text-base font-normal leading-relaxed hover:text-white transition-colors">
+                <a
+                  href="#"
+                  className="block text-white/70 font-poppins text-base font-normal leading-relaxed hover:text-white transition-colors"
+                >
                   Integration
                 </a>
-                <a href="#" className="block text-white/70 font-poppins text-base font-normal leading-relaxed hover:text-white transition-colors">
+                <a
+                  href="#"
+                  className="block text-white/70 font-poppins text-base font-normal leading-relaxed hover:text-white transition-colors"
+                >
                   Blog
                 </a>
               </div>
@@ -506,8 +552,8 @@ export default function Index() {
                   Join our Newsletter
                 </h3>
                 <div className="flex gap-4">
-                  <input 
-                    type="email" 
+                  <input
+                    type="email"
                     placeholder="Enter Your Email"
                     className="flex-1 h-12 bg-white/2 rounded-xl px-4 text-white placeholder-white/60 border border-white/10 focus:outline-none focus:border-white/30"
                   />
@@ -521,7 +567,10 @@ export default function Index() {
                 <span className="text-white/70 font-poppins text-base font-normal">
                   SentrySol, 2025
                 </span>
-                <a href="#" className="text-white/70 font-poppins text-base font-normal hover:text-white transition-colors">
+                <a
+                  href="#"
+                  className="text-white/70 font-poppins text-base font-normal hover:text-white transition-colors"
+                >
                   LinkedIn
                 </a>
               </div>
