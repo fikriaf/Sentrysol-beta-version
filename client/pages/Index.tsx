@@ -131,7 +131,7 @@ export default function Index() {
         </div>
 
         {/* Main Heading */}
-        <h1 className="relative md:absolute left-4 md:left-[176px] top-16 md:top-[182px] w-[calc(100%-2rem)] md:w-[1568px] h-auto md:h-[275px] font-poppins text-4xl sm:text-6xl md:text-8xl lg:text-[275px] font-bold leading-tight md:leading-none uppercase text-center md:text-left px-4 md:px-0" style={{background: 'linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.46) 50%, rgba(255, 255, 255, 0) 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text'}}>
+        <h1 className="relative md:absolute left-4 md:left-[176px] top-16 md:top-[182px] w-[calc(100%-2rem)] md:w-[1568px] h-auto md:h-[275px] font-poppins text-4xl sm:text-6xl md:text-8xl lg:text-[275px] font-bold leading-tight md:leading-none uppercase gradient-text text-center md:text-left px-4 md:px-0">
           SENTRYSOL
         </h1>
 
@@ -174,7 +174,7 @@ export default function Index() {
       </section>
 
       {/* Section 02 - Intelligent Protection */}
-      <section className="relative w-full h-auto md:h-[1289px] top-[100px] md:top-[1407px] z-[2] px-4 md:px-0">
+      <section className="relative w-full h-auto md:h-[1289px] top-[200px] md:top-[1407px] z-[2] px-4 md:px-0">
         <h2 className="relative md:absolute left-0 md:left-[188px] top-[59px] w-full md:w-[1500px] h-auto md:h-[304px] text-center font-poppins text-3xl sm:text-5xl md:text-7xl lg:text-[128px] font-normal leading-tight md:leading-[175px] tracking-[2px] md:tracking-[6.4px] gradient-section-text">
           Intelligent Protection Right On Your Phone
         </h2>
@@ -239,7 +239,7 @@ export default function Index() {
       </section>
 
       {/* Section 03 - Revolutionizing Web3 Mobile Security */}
-      <section className="relative w-full h-auto md:h-[1503px] top-[1100px] md:top-[2846px] z-[2] px-4 md:px-0">
+      <section className="relative w-full h-auto md:h-[1503px] top-[1400px] md:top-[2846px] z-[2] px-4 md:px-0">
         <h2 className="relative md:absolute left-0 md:left-[205px] top-[75px] w-full md:w-[1500px] h-auto md:h-[264px] text-white text-center font-poppins text-3xl sm:text-5xl md:text-7xl lg:text-[128px] font-normal leading-tight md:leading-[175px]">
           Revolutionizing Web3 Mobile Security
         </h2>
@@ -296,7 +296,7 @@ export default function Index() {
       </section>
 
       {/* Section 04 - Vision and Mission */}
-      <section className="relative w-full h-auto md:h-[1216px] top-[1800px] md:top-[4499px] z-[2] px-4 md:px-0">
+      <section className="relative w-full h-auto md:h-[1216px] top-[2400px] md:top-[4499px] z-[2] px-4 md:px-0">
         <img
           src="https://api.builder.io/api/v1/image/assets/TEMP/8013e91495f1b7f65a4ae0271db823785859a912?width=1178"
           alt="Data visualization background"
@@ -331,7 +331,7 @@ export default function Index() {
       </section>
 
       {/* Section 05 - Seamless Integration */}
-      <section className="relative w-full h-auto md:h-[1648px] top-[2200px] md:top-[5865px] z-[2] px-4 md:px-0">
+      <section className="relative w-full h-auto md:h-[1648px] top-[3200px] md:top-[5865px] z-[2] px-4 md:px-0">
         <h2 className="relative md:absolute left-0 md:left-[184px] top-[50px] md:top-[183px] w-full md:w-[1500px] h-auto md:h-[452px] text-center font-poppins text-3xl sm:text-5xl md:text-7xl lg:text-[128px] font-normal leading-tight md:leading-[175px] tracking-[2px] md:tracking-[6.4px] gradient-section-text">
           Seamless Integration for Enhanced Security.
         </h2>
@@ -358,7 +358,7 @@ export default function Index() {
       </section>
 
       {/* Section 06 - Soon On Seeker */}
-      <section className="relative w-full h-auto md:h-[2010px] top-[2600px] md:top-[7663px] z-[2] px-4 md:px-0">
+      <section className="relative w-full h-auto md:h-[2010px] top-[4000px] md:top-[7663px] z-[2] px-4 md:px-0">
         {/* Animation Background */}
         <div className="absolute inset-0 w-full h-[300px] md:h-[600px] overflow-hidden opacity-30 md:opacity-100">
           <img
@@ -404,7 +404,7 @@ export default function Index() {
       </section>
 
       {/* Footer */}
-      <footer className="relative md:absolute left-0 md:left-[200px] top-[3400px] md:top-[9722px] w-full md:w-[1520px] max-w-[calc(100%-2rem)] mx-auto md:mx-0 h-auto md:h-[445px] bg-sentry-footer z-[2] px-4 md:px-[200px] py-8 md:py-[59px]">
+      <footer className="relative md:absolute left-0 md:left-[200px] top-[5000px] md:top-[9722px] w-full md:w-[1520px] max-w-[calc(100%-2rem)] mx-auto md:mx-0 h-auto md:h-[445px] bg-sentry-footer z-[2] px-4 md:px-[200px] py-8 md:py-[59px]">
         <div className="relative w-full h-full">
           {/* Logo */}
           <div className="flex items-center gap-4 justify-center md:justify-start mb-8 md:mb-0">
