@@ -161,7 +161,7 @@ export default function Index() {
         </div>
 
         {/* Description and CTA */}
-        <div className="relative md:absolute left-4 md:left-[1467px] top-auto md:top-[531px] w-[calc(100%-2rem)] md:w-[300px] h-auto md:h-[255px] text-center md:text-left">
+        <div className="relative md:absolute left-4 md:left-[1200px] top-[350px] md:top-[531px] w-[calc(100%-2rem)] md:w-[400px] h-auto md:h-[255px] text-center md:text-left mt-8 md:mt-0">
           <p className="text-white font-poppins text-base md:text-lg font-normal leading-relaxed mb-8">
             SentrySol is an AI-native, on-device behavioral security framework
             built specifically for Web3 mobile environments, initially focusing
