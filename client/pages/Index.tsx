@@ -241,16 +241,7 @@ export default function Index() {
             {/* Central blur circle */}
             <div className="hidden md:block absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 rounded-full bg-white/8 shadow-[0px_4px_4px_66px_rgba(0,0,0,0.25)] blur-[62px]"></div>
             
-            {/* Central logo */}
-            <div className="flex justify-center mb-16">
-              <div className="relative w-48 h-48 z-10">
-                <img 
-                  src="https://api.builder.io/api/v1/image/assets/TEMP/d0b18dc10ba3a797f474bf0852a8e6a5580a49c0?width=694" 
-                  alt="SentrySol central logo" 
-                  className="w-full h-full object-contain"
-                />
-              </div>
-            </div>
+
 
             {/* Feature Labels - Grid layout */}
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-center">
