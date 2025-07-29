@@ -78,31 +78,41 @@ export default function Index() {
             </div>
 
             {/* Mobile Navigation */}
-            <div className="flex md:hidden flex-wrap items-center justify-center gap-4 text-sm">
-              <a
-                href="#"
-                className="text-white font-poppins hover:text-white/80 transition-colors"
+            <div className="md:hidden">
+              <button
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="text-white p-2"
               >
-                Products
-              </a>
-              <a
-                href="#"
-                className="text-white font-poppins hover:text-white/80 transition-colors"
-              >
-                About
-              </a>
-              <a
-                href="#"
-                className="text-white font-poppins hover:text-white/80 transition-colors"
-              >
-                Docs
-              </a>
-              <a
-                href="#"
-                className="text-white font-poppins hover:text-white/80 transition-colors"
-              >
-                Pricing
-              </a>
+                <Menu className="w-6 h-6" />
+              </button>
+              {isMobileMenuOpen && (
+                <div className="absolute top-full left-0 right-0 bg-black/90 backdrop-blur-sm border-t border-white/10 p-4 flex flex-col gap-4">
+                  <a
+                    href="#"
+                    className="text-white font-poppins hover:text-white/80 transition-colors"
+                  >
+                    Products
+                  </a>
+                  <a
+                    href="#"
+                    className="text-white font-poppins hover:text-white/80 transition-colors"
+                  >
+                    About
+                  </a>
+                  <a
+                    href="#"
+                    className="text-white font-poppins hover:text-white/80 transition-colors"
+                  >
+                    Docs
+                  </a>
+                  <a
+                    href="#"
+                    className="text-white font-poppins hover:text-white/80 transition-colors"
+                  >
+                    Pricing
+                  </a>
+                </div>
+              )}
             </div>
 
             {/* Search Box and Connect Button */}
