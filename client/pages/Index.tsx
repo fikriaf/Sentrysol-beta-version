@@ -128,7 +128,7 @@ export default function Index() {
                   <Search className="w-[18px] h-[18px] text-white/35" />
                 </div>
               </div>
-              <button className="md:hidden bg-white text-black font-poppins text-sm font-normal leading-none px-4 py-2 rounded-full hover:bg-white/90 transition-colors">
+              <button className="md:hidden bg-white text-black font-poppins text-sm font-normal leading-none px-4 py-2 rounded-full hover:bg-white/90 transition-colors whitespace-nowrap">
                 Connect
               </button>
             </div>
