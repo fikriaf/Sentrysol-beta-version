@@ -13,7 +13,7 @@ export default function Index() {
       </div>
 
       {/* Navbar */}
-      <nav className="relative top-4 md:absolute md:top-[46px] left-0 md:left-[210px] w-full md:w-[1500px] max-w-[calc(100%-2rem)] mx-auto md:mx-0 h-auto md:h-[120px] z-10 px-4 md:px-0">
+      <nav className="fixed top-4 left-1/2 transform -translate-x-1/2 md:absolute md:top-[46px] md:left-[210px] md:transform-none w-[calc(100%-2rem)] md:w-[1500px] max-w-[1500px] h-auto md:h-[120px] z-20 px-4 md:px-0">
         <div className="flex flex-col md:flex-row items-center justify-between w-full h-auto md:h-full px-4 md:px-5 py-4 md:py-7 rounded-3xl md:rounded-full border border-white/10 bg-white/10 backdrop-blur-sm gap-4 md:gap-0">
           {/* Mobile Logo */}
           <div className="flex items-center gap-3 md:hidden">
@@ -124,14 +124,14 @@ export default function Index() {
       </nav>
 
       {/* Hero Section */}
-      <section className="relative w-full h-auto md:h-[1257px] z-[2] pt-24 md:pt-0">
+      <section className="relative w-full h-auto md:h-[1257px] z-[2] pt-32 md:pt-0">
         {/* Secure. Smart. Private. */}
         <div className="absolute left-4 md:left-[176px] top-8 md:top-[140px] text-white font-poppins text-sm md:text-xl font-normal leading-none">
           Secure. Smart. Private.
         </div>
 
         {/* Main Heading */}
-        <h1 className="relative md:absolute left-4 md:left-[176px] top-16 md:top-[182px] w-[calc(100%-2rem)] md:w-[1568px] h-auto md:h-[275px] font-poppins text-4xl sm:text-6xl md:text-8xl lg:text-[275px] font-bold leading-tight md:leading-none uppercase gradient-text text-center md:text-left px-4 md:px-0">
+        <h1 className="relative md:absolute left-4 md:left-[176px] top-16 md:top-[182px] w-[calc(100%-2rem)] md:w-[1568px] h-auto md:h-[275px] font-poppins text-4xl sm:text-6xl md:text-8xl lg:text-[275px] font-bold leading-tight md:leading-none uppercase text-center md:text-left px-4 md:px-0" style={{background: 'linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.46) 50%, rgba(255, 255, 255, 0) 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text'}}>
           SENTRYSOL
         </h1>
 
