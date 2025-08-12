@@ -20,7 +20,8 @@ export default function Dashboard() {
 
         try {
             // Connect to the backend analysis endpoint
-            const eventSource = new EventSource(`http://localhost:8000/analyze/${publicKey.toString()}`);
+            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+            const eventSource = new EventSource(`${backendUrl}/analyze/${publicKey.toString()}`);
             
             eventSource.onmessage = function(event) {
                 if (event.data === '[DONE]') {
