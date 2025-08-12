@@ -170,8 +170,11 @@ export default function Index() {
                   framework built specifically for Web3 mobile environments,
                   initially focusing on Solana Mobile Seeker.
                 </p>
-                <button className="bg-sentry-sage text-black font-poppins text-lg font-normal leading-none px-6 py-3 rounded-full hover:bg-sentry-sage/90 transition-colors">
-                  Get Started
+                <button
+                  onClick={handleGetStarted}
+                  className="bg-sentry-sage text-black font-poppins text-lg font-normal leading-none px-6 py-3 rounded-full hover:bg-sentry-sage/90 transition-colors"
+                >
+                  {connected ? 'Go to Dashboard' : 'Get Started'}
                 </button>
               </div>
             </div>
