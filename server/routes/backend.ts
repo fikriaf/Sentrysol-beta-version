@@ -132,28 +132,27 @@ function generateMockNodes(centerAddress: string) {
   return nodes;
 }
 
-function generateMockEdges() {
+function generateMockEdges(nodes: any[]) {
   const edges = [];
-  const nodeCount = 16; // 1 center + 15 others
-  
+
   // Connect center node to others
-  for (let i = 1; i < 8; i++) {
+  for (let i = 1; i < Math.min(8, nodes.length); i++) {
     edges.push({
-      from: 0,
-      to: i,
+      from: nodes[0].id,
+      to: nodes[i].id,
       width: Math.random() * 5 + 1,
       color: { color: '#ffffff', opacity: 0.7 }
     });
   }
 
   // Add some random connections
-  for (let i = 0; i < 10; i++) {
-    const from = Math.floor(Math.random() * nodeCount);
-    const to = Math.floor(Math.random() * nodeCount);
-    if (from !== to) {
+  for (let i = 0; i < 10 && nodes.length > 2; i++) {
+    const fromNode = nodes[Math.floor(Math.random() * nodes.length)];
+    const toNode = nodes[Math.floor(Math.random() * nodes.length)];
+    if (fromNode.id !== toNode.id) {
       edges.push({
-        from,
-        to,
+        from: fromNode.id,
+        to: toNode.id,
         width: Math.random() * 3 + 1,
         color: { color: '#ffffff', opacity: 0.5 }
       });
