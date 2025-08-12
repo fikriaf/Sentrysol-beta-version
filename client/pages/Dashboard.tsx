@@ -79,8 +79,8 @@ export default function Dashboard() {
                         setLogs(prev => [...prev, `Step ${data.step || 0}: ${data.status} (${data.progress || 0}%)`]);
                     }
 
-                    if (data.analysis_result || data.detailed_data || data.transaction_graph) {
-                        setAnalysisData(data);
+                    if (data.data || data.analysis_result || data.detailed_data || data.transaction_graph) {
+                        setAnalysisData(data.data || data);
                     }
 
                     if (data.error) {
