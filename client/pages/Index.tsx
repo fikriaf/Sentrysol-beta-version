@@ -126,9 +126,7 @@ export default function Index() {
                   >
                     Pricing
                   </a>
-                  <button className="bg-white text-black font-poppins text-sm font-normal leading-none px-4 py-2 rounded-full hover:bg-white/90 transition-colors">
-                    Connect
-                  </button>
+                  <WalletMultiButton className="!bg-white !text-black !font-poppins !text-sm !font-normal !leading-none !px-4 !py-2 !rounded-full hover:!bg-white/90 !transition-colors !border-none" />
                 </div>
               )}
             </div>
