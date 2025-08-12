@@ -393,8 +393,11 @@ export default function Index() {
             you're always protected.
           </p>
 
-          <button className="bg-sentry-accent/20 border border-white/24 text-white font-poppins text-lg font-normal leading-none px-8 py-4 rounded-full hover:bg-sentry-accent/30 transition-colors">
-            Start Now
+          <button
+            onClick={handleGetStarted}
+            className="bg-sentry-accent/20 border border-white/24 text-white font-poppins text-lg font-normal leading-none px-8 py-4 rounded-full hover:bg-sentry-accent/30 transition-colors"
+          >
+            {connected ? 'Go to Dashboard' : 'Start Now'}
           </button>
 
           <h2 className="text-white font-poppins text-4xl sm:text-6xl lg:text-8xl font-normal leading-tight tracking-wide">
