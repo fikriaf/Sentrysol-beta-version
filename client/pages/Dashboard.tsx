@@ -107,17 +107,28 @@ export default function Dashboard() {
 
                 setLogs(prev => [...prev, `Connection Error: EventSource state is ${stateText}`]);
 
-                // If connection failed to establish
+                // If connection failed to establish or lost connection
                 if (eventSource.readyState === 2) {
-                    setLogs(prev => [...prev, 'Analysis stream connection failed']);
+                    setLogs(prev => [...prev, 'Analysis stream connection lost']);
                     eventSource.close();
                     setIsAnalyzing(false);
                 }
-                setLogs(prev => [...prev, 'This usually means the backend server is not running']);
-                setLogs(prev => [...prev, 'Please start the Python backend server first']);
+            };
 
-                eventSource.close();
-                setIsAnalyzing(false);
+            // Set a timeout to close connection if it takes too long
+            const timeout = setTimeout(() => {
+                if (eventSource.readyState !== 2) {
+                    setLogs(prev => [...prev, 'Analysis timeout - closing connection']);
+                    eventSource.close();
+                    setIsAnalyzing(false);
+                }
+            }, 30000); // 30 second timeout
+
+            // Clean up timeout when done
+            const originalClose = eventSource.close;
+            eventSource.close = function() {
+                clearTimeout(timeout);
+                originalClose.call(this);
             };
         } catch (error) {
             console.error('Analysis error:', error);
