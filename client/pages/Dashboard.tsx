@@ -16,8 +16,9 @@ export default function Dashboard() {
     const [activeView, setActiveView] = useState<'overview' | 'chat' | 'network' | 'flow'>('overview');
     const [targetAddress, setTargetAddress] = useState<string>('');
 
-    const startAnalysis = async () => {
-        if (!publicKey) return;
+    const startAnalysis = async (addressToAnalyze?: string) => {
+        const analysisAddress = addressToAnalyze || publicKey?.toString();
+        if (!analysisAddress) return;
         
         setIsAnalyzing(true);
         setProgress(0);
@@ -78,7 +79,7 @@ export default function Dashboard() {
                             to="/" 
                             className="text-white/60 font-poppins text-sm hover:text-white transition-colors"
                         >
-                            �� Back to Home
+                            ← Back to Home
                         </Link>
                     </div>
                 </div>
