@@ -28,8 +28,8 @@ export default function Dashboard() {
 
         try {
             // Connect to the backend analysis endpoint
-            // Force local development server for backend routes
-            const backendUrl = import.meta.env.DEV ? 'http://localhost:8084' : window.location.origin;
+            // Use same origin for both dev and production since we have Node.js backend
+            const backendUrl = window.location.origin;
             const analyzeUrl = `${backendUrl}/analyze/${analysisAddress}`;
 
             console.log('Attempting to connect to:', analyzeUrl);
