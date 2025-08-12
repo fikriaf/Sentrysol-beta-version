@@ -118,7 +118,7 @@ export function handleAnalyzeWallet(req: Request, res: Response) {
   };
 
   // Start sending steps
-  setTimeout(sendStep, 500);
+  setTimeout(sendStep, 100); // Start faster
 
   // Handle client disconnect
   req.on('close', () => {
