@@ -63,6 +63,12 @@ export default function Dashboard() {
         }
     };
 
+    const handleChatAddressAnalyze = (address: string) => {
+        setTargetAddress(address);
+        setActiveView('overview');
+        startAnalysis(address);
+    };
+
     if (!connected) {
         return (
             <div className="min-h-screen main-gradient flex items-center justify-center px-4">
