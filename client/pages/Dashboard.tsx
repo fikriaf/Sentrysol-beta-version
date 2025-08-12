@@ -29,34 +29,91 @@ export default function Dashboard() {
         try {
             // Connect to the backend analysis endpoint
             const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
-            const eventSource = new EventSource(`${backendUrl}/analyze/${analysisAddress}`);
-            
+            const analyzeUrl = `${backendUrl}/analyze/${analysisAddress}`;
+
+            console.log('Attempting to connect to:', analyzeUrl);
+            setLogs(prev => [...prev, `Connecting to: ${analyzeUrl}`]);
+
+            // First check if backend is available
+            try {
+                const healthCheck = await fetch(`${backendUrl}/health`, {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json' }
+                });
+
+                if (!healthCheck.ok) {
+                    throw new Error(`Backend health check failed: ${healthCheck.status}`);
+                }
+
+                setLogs(prev => [...prev, 'Backend is healthy, starting analysis...']);
+            } catch (healthError) {
+                console.error('Backend health check failed:', healthError);
+                setLogs(prev => [...prev, `Backend Error: ${healthError.message}`]);
+                setLogs(prev => [...prev, 'Note: Make sure the Python backend is running on port 8000']);
+                setLogs(prev => [...prev, 'Run: cd backend && python -m uvicorn main:app --port 8000 --reload']);
+                setIsAnalyzing(false);
+                return;
+            }
+
+            const eventSource = new EventSource(analyzeUrl);
+
+            eventSource.onopen = function(event) {
+                console.log('EventSource connection opened:', event);
+                setLogs(prev => [...prev, 'Successfully connected to analysis stream']);
+            };
+
             eventSource.onmessage = function(event) {
+                console.log('EventSource message received:', event.data);
+
                 if (event.data === '[DONE]') {
                     eventSource.close();
                     setIsAnalyzing(false);
+                    setLogs(prev => [...prev, 'Analysis completed successfully']);
                     return;
                 }
-                
+
                 try {
                     const data = JSON.parse(event.data);
-                    setProgress(data.progress);
-                    setLogs(prev => [...prev, `Step ${data.step}: ${data.status} (${data.progress}%)`]);
-                    
-                    if (data.analysis_result || data.detailed_data) {
+                    setProgress(data.progress || 0);
+
+                    if (data.status) {
+                        setLogs(prev => [...prev, `Step ${data.step || 0}: ${data.status} (${data.progress || 0}%)`]);
+                    }
+
+                    if (data.analysis_result || data.detailed_data || data.transaction_graph) {
                         setAnalysisData(data);
                     }
+
+                    if (data.error) {
+                        setLogs(prev => [...prev, `Error: ${data.status || 'Unknown error occurred'}`]);
+                    }
                 } catch (e) {
-                    console.error('Error parsing data:', e);
-                    setLogs(prev => [...prev, 'Error: Failed to parse response data']);
+                    console.error('Error parsing EventSource data:', e, 'Raw data:', event.data);
+                    setLogs(prev => [...prev, `Parse Error: ${e.message}`]);
                 }
             };
-            
+
             eventSource.onerror = function(event) {
-                console.error('EventSource error:', event);
+                console.error('EventSource error details:', {
+                    event,
+                    readyState: eventSource.readyState,
+                    url: analyzeUrl
+                });
+
+                const readyStateMap = {
+                    0: 'CONNECTING',
+                    1: 'OPEN',
+                    2: 'CLOSED'
+                };
+
+                const stateText = readyStateMap[eventSource.readyState] || 'UNKNOWN';
+
+                setLogs(prev => [...prev, `Connection Error: EventSource state is ${stateText}`]);
+                setLogs(prev => [...prev, 'This usually means the backend server is not running']);
+                setLogs(prev => [...prev, 'Please start the Python backend server first']);
+
                 eventSource.close();
                 setIsAnalyzing(false);
-                setLogs(prev => [...prev, 'Connection Error: Unable to connect to analysis server']);
             };
         } catch (error) {
             console.error('Analysis error:', error);
