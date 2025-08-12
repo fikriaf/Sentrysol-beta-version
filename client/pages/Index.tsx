@@ -1,5 +1,8 @@
 import { Search, X, Shield, Eye, Bug, Menu } from "lucide-react";
 import { useState } from "react";
+import { useWallet } from '@solana/wallet-adapter-react';
+import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+import { useNavigate } from 'react-router-dom';
 
 export default function Index() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
