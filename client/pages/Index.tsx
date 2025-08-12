@@ -6,6 +6,20 @@ import { useNavigate } from 'react-router-dom';
 
 export default function Index() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { connected } = useWallet();
+  const navigate = useNavigate();
+
+  const handleGetStarted = () => {
+    if (connected) {
+      navigate('/dashboard');
+    } else {
+      // If not connected, trigger wallet connection first
+      const walletButton = document.querySelector('.wallet-adapter-button') as HTMLButtonElement;
+      if (walletButton) {
+        walletButton.click();
+      }
+    }
+  };
 
   return (
     <div className="min-h-screen main-gradient relative">
