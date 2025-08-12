@@ -19,42 +19,74 @@ export function handleAnalyzeWallet(req: Request, res: Response) {
     'Access-Control-Allow-Headers': 'Cache-Control'
   });
 
-  // Mock analysis steps
+  // Mock analysis steps matching Python backend structure
+  const totalTx = Math.floor(Math.random() * 1000) + 50;
+  const signatures = Math.floor(Math.random() * 20) + 5;
+  const tokensFound = Math.floor(Math.random() * 15) + 2;
+  const nftsFound = Math.floor(Math.random() * 8) + 1;
+  const riskScore = Math.floor(Math.random() * 100);
+  const riskLevel = riskScore < 30 ? 'low' : riskScore < 70 ? 'medium' : 'high';
+
   const steps = [
-    { step: 1, status: 'Initializing analysis...', progress: 10 },
-    { step: 2, status: 'Fetching transaction history...', progress: 25 },
-    { step: 3, status: 'Analyzing transaction patterns...', progress: 50 },
-    { step: 4, status: 'Building transaction network...', progress: 75 },
-    { step: 5, status: 'Generating security analysis...', progress: 90 },
+    { step: 1, status: 'Fetching address history...', progress: 10 },
     {
-      step: 6,
+      step: 1,
+      status: 'Address history fetched',
+      progress: 15,
+      data: { transactions_count: totalTx }
+    },
+    { step: 2, status: 'Getting transaction signatures...', progress: 25 },
+    {
+      step: 2,
+      status: 'Signatures retrieved',
+      progress: 35,
+      data: { signatures_count: signatures }
+    },
+    { step: 3, status: 'Analyzing token transfers...', progress: 45 },
+    {
+      step: 3,
+      status: 'Token and NFT metadata collected',
+      progress: 55,
+      data: { tokens_analyzed: tokensFound, nfts_found: nftsFound }
+    },
+    { step: 4, status: 'Calculating wallet risk score...', progress: 65 },
+    {
+      step: 4,
+      status: 'Wallet score calculated',
+      progress: 75,
+      data: { wallet_score: { risk_score: riskScore } }
+    },
+    { step: 5, status: 'Gathering additional data...', progress: 80 },
+    {
+      step: 5,
+      status: 'Additional data gathered',
+      progress: 85,
+      data: { address_name: 'Unknown', balance_changes_count: 3 }
+    },
+    { step: 6, status: 'Aggregating context for analysis...', progress: 90 },
+    { step: 7, status: 'Running AI analysis...', progress: 95 },
+    {
+      step: 8,
       status: 'Analysis complete',
       progress: 100,
-      data: {
-        address,
-        risk_score: Math.floor(Math.random() * 100),
-        total_transactions: Math.floor(Math.random() * 1000) + 50,
-        analysis: {
-          suspicious_activities: [
-            "Multiple large transactions detected",
-            "Rapid transaction sequences identified"
-          ],
-          patterns: {
-            total_transactions: Math.floor(Math.random() * 1000) + 50,
-            unique_counterparts: Math.floor(Math.random() * 100) + 10,
-            large_transactions: Math.floor(Math.random() * 10),
-            rapid_transactions: Math.floor(Math.random() * 5)
-          }
+      analysis_result: generateMockThreatAnalysis(address, riskScore, riskLevel),
+      detailed_data: {
+        wallet_info: {
+          address: address,
+          address_name: 'Unknown',
+          risk_score: { risk_score: riskScore }
         },
-        network_data: (() => {
-          const nodes = generateMockNodes(address);
-          return {
-            nodes,
-            edges: generateMockEdges(nodes)
-          };
-        })(),
-        transaction_flow: generateMockTransactionFlow(),
-        ai_analysis: "This wallet shows typical trading patterns with moderate risk indicators. The transaction frequency and amounts suggest automated trading activity."
+        transaction_summary: {
+          total_transactions: totalTx,
+          recent_signatures: signatures,
+          balance_changes: []
+        },
+        token_analysis: {
+          tokens_found: tokensFound,
+          token_metadata: [],
+          nfts_found: nftsFound,
+          nft_metadata: generateMockNFTs()
+        }
       }
     }
   ];
