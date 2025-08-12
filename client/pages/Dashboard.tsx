@@ -2,6 +2,10 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { ChatBox } from '@/components/ChatBox';
+import { NetworkGraph } from '@/components/NetworkGraph';
+import { TransactionFlow } from '@/components/TransactionFlow';
+import { Activity, Shield, TrendingUp, Eye, MessageSquare, Network, BarChart3 } from 'lucide-react';
 
 export default function Dashboard() {
     const { publicKey, connected } = useWallet();
