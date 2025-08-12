@@ -1,9 +1,9 @@
+/* Wallet Adapter Styles */
+@import '@solana/wallet-adapter-react-ui/styles.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-/* Wallet Adapter Styles */
-@import '@solana/wallet-adapter-react-ui/styles.css';
 
 @layer base {
   /* SentrySol Design System Colors */
