@@ -28,7 +28,7 @@ export default function Dashboard() {
 
         try {
             // Connect to the backend analysis endpoint
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+            const backendUrl = window.location.origin; // Use same origin as frontend
             const analyzeUrl = `${backendUrl}/analyze/${analysisAddress}`;
 
             console.log('Attempting to connect to:', analyzeUrl);
@@ -49,8 +49,7 @@ export default function Dashboard() {
             } catch (healthError) {
                 console.error('Backend health check failed:', healthError);
                 setLogs(prev => [...prev, `Backend Error: ${healthError.message}`]);
-                setLogs(prev => [...prev, 'Note: Make sure the Python backend is running on port 8000']);
-                setLogs(prev => [...prev, 'Run: cd backend && python -m uvicorn main:app --port 8000 --reload']);
+                setLogs(prev => [...prev, 'Note: Backend service is not responding']);
                 setIsAnalyzing(false);
                 return;
             }
