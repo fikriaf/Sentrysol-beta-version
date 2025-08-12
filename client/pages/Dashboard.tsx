@@ -27,9 +27,8 @@ export default function Dashboard() {
         setTargetAddress(analysisAddress);
 
         try {
-            // Connect to the backend analysis endpoint
-            // Use same origin for both dev and production since we have Node.js backend
-            const backendUrl = window.location.origin;
+            // Connect to the Python backend analysis endpoint
+            const backendUrl = import.meta.env.DEV ? 'http://localhost:8000' : window.location.origin;
             const analyzeUrl = `${backendUrl}/analyze/${analysisAddress}`;
 
             console.log('Attempting to connect to:', analyzeUrl);
