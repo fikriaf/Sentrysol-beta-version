@@ -118,36 +118,14 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onAddressAnalyze, isAnalyzing 
     try {
       // Get AI response
       const analysisResult = await analyzeWithBackend(inputMessage, extractedAddress || undefined);
-      
-      let botResponse: ChatMessage;
 
-      if (analysisResult) {
-        botResponse = {
-          id: (Date.now() + 1).toString(),
-          type: 'bot',
-          content: analysisResult.response,
-          timestamp: new Date(),
-          analysis: analysisResult.quick_analysis
-        };
-      } else {
-        // Fallback response
-        if (extractedAddress) {
-          botResponse = {
-            id: (Date.now() + 1).toString(),
-            type: 'bot',
-            content: `I found a Solana address: ${extractedAddress}\n\nWould you like me to perform a detailed security analysis of this wallet? I can check for suspicious activity, transaction patterns, and potential security risks.`,
-            timestamp: new Date(),
-            analysis: { address: extractedAddress }
-          };
-        } else {
-          botResponse = {
-            id: (Date.now() + 1).toString(),
-            type: 'bot',
-            content: 'I can help you analyze Solana wallet addresses. Please provide a valid Solana address (starting with letters/numbers, 32-44 characters long) and I\'ll trace its activity and security profile.',
-            timestamp: new Date()
-          };
-        }
-      }
+      let botResponse: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        type: 'bot',
+        content: analysisResult.response,
+        timestamp: new Date(),
+        analysis: analysisResult.quick_analysis
+      };
 
       setMessages(prev => [...prev, botResponse]);
 
@@ -165,11 +143,25 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onAddressAnalyze, isAnalyzing 
       }
 
     } catch (error) {
+      console.error('Chat error:', error);
+
+      let errorContent = 'Sorry, I encountered an error while processing your request.';
+
+      if (error.message.includes('Backend server is not running')) {
+        errorContent = `🚨 Backend Connection Error\n\nThe Python backend server is not running. To use AI analysis features:\n\n1. Open a terminal\n2. Navigate to the backend directory: cd backend\n3. Install dependencies: pip install -r requirements.txt\n4. Start server: uvicorn main:app --port 8000 --reload\n\nOnce the backend is running, try your request again!`;
+      } else if (error.message.includes('timed out')) {
+        errorContent = `⏱️ Request Timeout\n\nThe backend is taking too long to respond. This might be because:\n• The server is starting up\n• Heavy processing load\n• Network issues\n\nTry again in a few moments.`;
+      } else if (extractedAddress) {
+        // Fallback response when backend is down but address is detected
+        errorContent = `I found a Solana address: ${extractedAddress}\n\n❌ Backend Analysis Unavailable\nThe AI analysis service is currently offline. However, you can still:\n• Copy the address for manual review\n• Try again once the backend is running\n• Use other blockchain explorers for basic info`;
+      }
+
       const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         type: 'bot',
-        content: 'Sorry, I encountered an error while processing your request. Please try again or check if the backend service is running.',
-        timestamp: new Date()
+        content: errorContent,
+        timestamp: new Date(),
+        analysis: extractedAddress ? { address: extractedAddress } : undefined
       };
       setMessages(prev => [...prev, errorMessage]);
     }
