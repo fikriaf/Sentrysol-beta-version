@@ -48,7 +48,8 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onAddressAnalyze, isAnalyzing 
 
   const analyzeWithBackend = async (message: string, address?: string) => {
     try {
-      const backendUrl = window.location.origin; // Use same origin as frontend
+      // Force local development server for backend routes
+      const backendUrl = import.meta.env.DEV ? 'http://localhost:8084' : window.location.origin;
 
       // First check if backend is available
       try {
