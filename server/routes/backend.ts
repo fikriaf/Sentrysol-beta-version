@@ -62,16 +62,25 @@ export function handleAnalyzeWallet(req: Request, res: Response) {
   let currentStep = 0;
 
   const sendStep = () => {
-    if (currentStep < steps.length) {
-      const stepData = steps[currentStep];
-      res.write(`data: ${JSON.stringify(stepData)}\n\n`);
-      currentStep++;
-      
-      // Last step includes complete data
-      if (currentStep === steps.length) {
+    try {
+      if (currentStep < steps.length && !res.headersSent) {
+        const stepData = steps[currentStep];
+        res.write(`data: ${JSON.stringify(stepData)}\n\n`);
+        currentStep++;
+
+        // Last step includes complete data
+        if (currentStep === steps.length) {
+          res.write(`data: [DONE]\n\n`);
+          res.end();
+        } else {
+          setTimeout(sendStep, 1500); // 1.5 second delay between steps
+        }
+      }
+    } catch (error) {
+      console.error('SSE Error:', error);
+      if (!res.headersSent) {
+        res.write(`data: ${JSON.stringify({error: 'Stream error occurred'})}\n\n`);
         res.end();
-      } else {
-        setTimeout(sendStep, 1500); // 1.5 second delay between steps
       }
     }
   };
@@ -81,7 +90,17 @@ export function handleAnalyzeWallet(req: Request, res: Response) {
 
   // Handle client disconnect
   req.on('close', () => {
-    res.end();
+    if (!res.headersSent) {
+      res.end();
+    }
+  });
+
+  // Handle errors
+  req.on('error', (error) => {
+    console.error('Request error:', error);
+    if (!res.headersSent) {
+      res.end();
+    }
   });
 }
 
