@@ -271,3 +271,84 @@ function generateRandomAddress(): string {
   }
   return result;
 }
+
+function generateMockThreatAnalysis(address: string, riskScore: number, riskLevel: string) {
+  const threats = [
+    {
+      threat_type: 'Suspicious Transaction Pattern',
+      reason: 'High frequency of micro-transactions detected which may indicate automated trading or bot activity',
+      confidence: riskScore > 70 ? 'High' : riskScore > 40 ? 'Medium' : 'Low',
+      supporting_evidence: {
+        transaction_frequency: 'Above average',
+        transaction_amounts: 'Consistently small values',
+        time_pattern: 'Regular intervals'
+      },
+      recommended_actions: [
+        'Monitor transaction patterns for irregularities',
+        'Verify legitimacy of trading activities',
+        'Check for bot or automation indicators'
+      ]
+    }
+  ];
+
+  if (riskScore > 60) {
+    threats.push({
+      threat_type: 'High Risk Score',
+      reason: 'Wallet has elevated risk indicators based on transaction history and connected addresses',
+      confidence: 'Medium',
+      supporting_evidence: {
+        risk_indicators: 'Multiple red flags detected',
+        address_clustering: 'Connected to flagged addresses',
+        transaction_volume: 'Unusual volume patterns'
+      },
+      recommended_actions: [
+        'Enhanced due diligence required',
+        'Additional verification recommended',
+        'Consider transaction limits'
+      ]
+    });
+  }
+
+  return {
+    threat_analysis: {
+      metadata: {
+        target_address: address,
+        chain: 'Solana',
+        analysis_timestamp: new Date().toISOString(),
+        data_sources: ['SentrySol Security AI', 'SentrySol Blockchain Analyzer', 'SentrySol ML Model']
+      },
+      potential_threats: threats,
+      overall_risk_level: riskLevel,
+      risk_score: riskScore,
+      risk_factors: [
+        'Transaction frequency patterns',
+        'Connected address analysis',
+        'Token interaction patterns'
+      ],
+      ioc: {
+        addresses: [address],
+        transaction_signatures: [generateRandomSignature(), generateRandomSignature()],
+        suspicious_mints: [],
+        related_programs: [generateRandomAddress()]
+      },
+      additional_notes: `Analysis completed for address ${address}. Risk assessment based on transaction patterns, network analysis, and behavioral indicators.`
+    }
+  };
+}
+
+function generateRandomSignature(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz123456789';
+  let result = '';
+  for (let i = 0; i < 88; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
+
+function generateMockNFTs() {
+  return [
+    { name: 'Solana Monkey #1234', symbol: 'SMB' },
+    { name: 'DeGods #5678', symbol: 'DEGOD' },
+    { name: 'Okay Bears #9012', symbol: 'BEAR' }
+  ].slice(0, Math.floor(Math.random() * 3) + 1);
+}
