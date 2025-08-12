@@ -13,6 +13,8 @@ export default function Dashboard() {
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [progress, setProgress] = useState(0);
     const [logs, setLogs] = useState<string[]>([]);
+    const [activeView, setActiveView] = useState<'overview' | 'chat' | 'network' | 'flow'>('overview');
+    const [targetAddress, setTargetAddress] = useState<string>('');
 
     const startAnalysis = async () => {
         if (!publicKey) return;
@@ -76,7 +78,7 @@ export default function Dashboard() {
                             to="/" 
                             className="text-white/60 font-poppins text-sm hover:text-white transition-colors"
                         >
-                            ← Back to Home
+                            �� Back to Home
                         </Link>
                     </div>
                 </div>
