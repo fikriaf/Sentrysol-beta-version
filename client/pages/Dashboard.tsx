@@ -5,11 +5,11 @@ import { Link } from 'react-router-dom';
 import { ChatBox } from '@/components/ChatBox';
 import { NetworkGraph } from '@/components/NetworkGraph';
 import { TransactionFlow } from '@/components/TransactionFlow';
-import { Activity, Shield, TrendingUp, Eye, MessageSquare, Network, BarChart3 } from 'lucide-react';
+import { Activity, Shield, TrendingUp, Eye, MessageSquare, Network, BarChart3, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
 
 export default function Dashboard() {
     const { publicKey, connected } = useWallet();
-    const [analysisData, setAnalysisData] = useState(null);
+    const [analysisData, setAnalysisData] = useState<any>(null);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [progress, setProgress] = useState(0);
     const [logs, setLogs] = useState<string[]>([]);
@@ -24,6 +24,7 @@ export default function Dashboard() {
         setProgress(0);
         setLogs([]);
         setAnalysisData(null);
+        setTargetAddress(analysisAddress);
 
         try {
             // Connect to the backend analysis endpoint
@@ -69,6 +70,24 @@ export default function Dashboard() {
         startAnalysis(address);
     };
 
+    const getRiskColor = (riskScore: number) => {
+        if (riskScore < 30) return 'text-green-400';
+        if (riskScore < 70) return 'text-yellow-400';
+        return 'text-red-400';
+    };
+
+    const getRiskBgColor = (riskScore: number) => {
+        if (riskScore < 30) return 'bg-green-500/20 border-green-500/30';
+        if (riskScore < 70) return 'bg-yellow-500/20 border-yellow-500/30';
+        return 'bg-red-500/20 border-red-500/30';
+    };
+
+    const getRiskLevel = (riskScore: number) => {
+        if (riskScore < 30) return 'LOW';
+        if (riskScore < 70) return 'MEDIUM';
+        return 'HIGH';
+    };
+
     if (!connected) {
         return (
             <div className="min-h-screen main-gradient flex items-center justify-center px-4">
@@ -109,144 +128,281 @@ export default function Dashboard() {
                                 SENTRYSOL
                             </span>
                         </Link>
-                        <span className="text-white/60 font-poppins text-sm">Dashboard</span>
+                        <span className="text-white/60 font-poppins text-sm">Security Dashboard</span>
                     </div>
                     <WalletMultiButton className="!bg-sentry-sage !text-black !font-poppins !rounded-full hover:!bg-sentry-sage/90" />
                 </div>
             </header>
 
             <div className="max-w-7xl mx-auto p-6">
+                {/* Navigation Tabs */}
+                <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-2 mb-8">
+                    <div className="flex gap-2 overflow-x-auto">
+                        <button
+                            onClick={() => setActiveView('overview')}
+                            className={`flex items-center gap-2 px-4 py-3 rounded-xl font-poppins transition-colors whitespace-nowrap ${
+                                activeView === 'overview' ? 'bg-sentry-accent text-white' : 'text-white/70 hover:text-white hover:bg-white/5'
+                            }`}
+                        >
+                            <Activity className="w-5 h-5" />
+                            Security Analysis
+                        </button>
+                        <button
+                            onClick={() => setActiveView('chat')}
+                            className={`flex items-center gap-2 px-4 py-3 rounded-xl font-poppins transition-colors whitespace-nowrap ${
+                                activeView === 'chat' ? 'bg-sentry-accent text-white' : 'text-white/70 hover:text-white hover:bg-white/5'
+                            }`}
+                        >
+                            <MessageSquare className="w-5 h-5" />
+                            AI Address Tracer
+                        </button>
+                        <button
+                            onClick={() => setActiveView('network')}
+                            className={`flex items-center gap-2 px-4 py-3 rounded-xl font-poppins transition-colors whitespace-nowrap ${
+                                activeView === 'network' ? 'bg-sentry-accent text-white' : 'text-white/70 hover:text-white hover:bg-white/5'
+                            }`}
+                        >
+                            <Network className="w-5 h-5" />
+                            Network Graph
+                        </button>
+                        <button
+                            onClick={() => setActiveView('flow')}
+                            className={`flex items-center gap-2 px-4 py-3 rounded-xl font-poppins transition-colors whitespace-nowrap ${
+                                activeView === 'flow' ? 'bg-sentry-accent text-white' : 'text-white/70 hover:text-white hover:bg-white/5'
+                            }`}
+                        >
+                            <BarChart3 className="w-5 h-5" />
+                            Fund Flow
+                        </button>
+                    </div>
+                </div>
+
                 {/* Welcome Section */}
                 <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-3xl p-8 mb-8">
                     <h1 className="text-white font-poppins text-3xl font-bold mb-4">
-                        Welcome to SentrySol Dashboard
+                        SentrySol Security Dashboard
                     </h1>
                     <p className="text-white/70 font-poppins text-lg mb-6">
-                        AI behavioral security analysis for your Solana wallet
+                        AI-powered behavioral security analysis for Solana wallets
                     </p>
-                    <div className="bg-black/20 rounded-2xl p-4">
-                        <p className="text-white/60 font-poppins text-sm mb-2">Connected Wallet:</p>
-                        <p className="text-white font-mono text-lg break-all">
-                            {publicKey?.toString()}
-                        </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="bg-black/20 rounded-2xl p-4">
+                            <p className="text-white/60 font-poppins text-sm mb-2">Connected Wallet:</p>
+                            <p className="text-white font-mono text-sm break-all">
+                                {publicKey?.toString()}
+                            </p>
+                        </div>
+                        {targetAddress && targetAddress !== publicKey?.toString() && (
+                            <div className="bg-black/20 rounded-2xl p-4">
+                                <p className="text-white/60 font-poppins text-sm mb-2">Analyzing Address:</p>
+                                <p className="text-white font-mono text-sm break-all">
+                                    {targetAddress}
+                                </p>
+                            </div>
+                        )}
                     </div>
                 </div>
 
-                {/* Analysis Section */}
-                <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-3xl p-8 mb-8">
-                    <div className="flex items-center justify-between mb-6">
-                        <h2 className="text-white font-poppins text-2xl font-bold">
-                            Security Analysis
-                        </h2>
-                        <button
-                            onClick={startAnalysis}
-                            disabled={isAnalyzing}
-                            className="bg-sentry-sage text-black font-poppins text-lg font-normal px-6 py-3 rounded-full hover:bg-sentry-sage/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {isAnalyzing ? 'Analyzing...' : 'Start Analysis'}
-                        </button>
-                    </div>
-
-                    {/* Progress Bar */}
-                    {isAnalyzing && (
-                        <div className="mb-6">
-                            <div className="flex justify-between items-center mb-2">
-                                <span className="text-white/70 font-poppins">Analysis Progress</span>
-                                <span className="text-white font-poppins">{progress}%</span>
-                            </div>
-                            <div className="w-full bg-black/20 rounded-full h-3">
-                                <div 
-                                    className="bg-gradient-to-r from-sentry-sage to-sentry-accent h-3 rounded-full transition-all duration-500"
-                                    style={{ width: `${progress}%` }}
-                                ></div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Logs */}
-                    {logs.length > 0 && (
-                        <div className="bg-black/20 rounded-2xl p-4 mb-6 max-h-60 overflow-y-auto">
-                            <h3 className="text-white font-poppins text-lg font-semibold mb-3">Analysis Logs</h3>
-                            {logs.map((log, index) => (
-                                <div key={index} className="text-white/70 font-mono text-sm mb-2 p-2 bg-black/20 rounded">
-                                    {log}
-                                </div>
-                            ))}
-                        </div>
-                    )}
-
-                    {/* Analysis Results */}
-                    {analysisData && (
-                        <div className="bg-black/20 rounded-2xl p-6">
-                            <h3 className="text-white font-poppins text-xl font-semibold mb-4">Analysis Results</h3>
-                            
-                            {/* Risk Level */}
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                                <div className="bg-gradient-to-r from-green-500/20 to-green-600/20 border border-green-500/30 rounded-xl p-4 text-center">
-                                    <div className="text-green-300 font-poppins text-sm mb-1">Security Score</div>
-                                    <div className="text-white font-poppins text-2xl font-bold">Safe</div>
-                                </div>
-                                <div className="bg-gradient-to-r from-blue-500/20 to-blue-600/20 border border-blue-500/30 rounded-xl p-4 text-center">
-                                    <div className="text-blue-300 font-poppins text-sm mb-1">Threats Detected</div>
-                                    <div className="text-white font-poppins text-2xl font-bold">0</div>
-                                </div>
-                                <div className="bg-gradient-to-r from-purple-500/20 to-purple-600/20 border border-purple-500/30 rounded-xl p-4 text-center">
-                                    <div className="text-purple-300 font-poppins text-sm mb-1">Data Sources</div>
-                                    <div className="text-white font-poppins text-2xl font-bold">5</div>
-                                </div>
+                {/* Content based on active view */}
+                {activeView === 'overview' && (
+                    <div className="space-y-8">
+                        {/* Analysis Section */}
+                        <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-3xl p-8">
+                            <div className="flex items-center justify-between mb-6">
+                                <h2 className="text-white font-poppins text-2xl font-bold">
+                                    Security Analysis
+                                </h2>
+                                <button
+                                    onClick={() => startAnalysis()}
+                                    disabled={isAnalyzing}
+                                    className="bg-sentry-sage text-black font-poppins text-lg font-normal px-6 py-3 rounded-full hover:bg-sentry-sage/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {isAnalyzing ? 'Analyzing...' : 'Start Analysis'}
+                                </button>
                             </div>
 
-                            {/* Raw Data (for development) */}
-                            <details className="bg-black/20 rounded-xl p-4">
-                                <summary className="text-white font-poppins cursor-pointer mb-2">
-                                    View Raw Analysis Data
-                                </summary>
-                                <pre className="text-white/70 font-mono text-xs overflow-auto max-h-60">
-                                    {JSON.stringify(analysisData, null, 2)}
-                                </pre>
-                            </details>
-                        </div>
-                    )}
-                </div>
+                            {/* Progress Bar */}
+                            {isAnalyzing && (
+                                <div className="mb-6">
+                                    <div className="flex justify-between items-center mb-2">
+                                        <span className="text-white/70 font-poppins">Analysis Progress</span>
+                                        <span className="text-white font-poppins">{progress}%</span>
+                                    </div>
+                                    <div className="w-full bg-black/20 rounded-full h-3">
+                                        <div 
+                                            className="bg-gradient-to-r from-sentry-sage to-sentry-accent h-3 rounded-full transition-all duration-500"
+                                            style={{ width: `${progress}%` }}
+                                        ></div>
+                                    </div>
+                                </div>
+                            )}
 
-                {/* Feature Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
-                        <div className="w-12 h-12 bg-sentry-sage rounded-xl flex items-center justify-center mb-4">
-                            <svg className="w-6 h-6 text-black" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-                            </svg>
-                        </div>
-                        <h3 className="text-white font-poppins text-lg font-semibold mb-2">Real-time Protection</h3>
-                        <p className="text-white/70 font-poppins text-sm">
-                            Continuous monitoring of your wallet activity for suspicious behavior
-                        </p>
-                    </div>
+                            {/* Logs */}
+                            {logs.length > 0 && (
+                                <div className="bg-black/20 rounded-2xl p-4 mb-6 max-h-60 overflow-y-auto">
+                                    <h3 className="text-white font-poppins text-lg font-semibold mb-3">Analysis Logs</h3>
+                                    {logs.map((log, index) => (
+                                        <div key={index} className="text-white/70 font-mono text-sm mb-2 p-2 bg-black/20 rounded">
+                                            {log}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
 
-                    <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
-                        <div className="w-12 h-12 bg-sentry-accent rounded-xl flex items-center justify-center mb-4">
-                            <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                        </div>
-                        <h3 className="text-white font-poppins text-lg font-semibold mb-2">AI Analysis</h3>
-                        <p className="text-white/70 font-poppins text-sm">
-                            Advanced AI algorithms analyze transaction patterns and detect threats
-                        </p>
-                    </div>
+                            {/* Analysis Results */}
+                            {analysisData && (
+                                <div className="space-y-6">
+                                    {/* Risk Assessment */}
+                                    {analysisData.analysis_result && (
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                            <div className={`${getRiskBgColor(analysisData.analysis_result.risk_score || 0)} border rounded-xl p-6 text-center`}>
+                                                <div className="flex items-center justify-center gap-2 mb-2">
+                                                    {analysisData.analysis_result.risk_score < 30 ? (
+                                                        <CheckCircle className="w-6 h-6 text-green-400" />
+                                                    ) : analysisData.analysis_result.risk_score < 70 ? (
+                                                        <Clock className="w-6 h-6 text-yellow-400" />
+                                                    ) : (
+                                                        <AlertTriangle className="w-6 h-6 text-red-400" />
+                                                    )}
+                                                    <span className="text-white/70 font-poppins text-sm">Risk Level</span>
+                                                </div>
+                                                <div className={`font-poppins text-2xl font-bold ${getRiskColor(analysisData.analysis_result.risk_score || 0)}`}>
+                                                    {getRiskLevel(analysisData.analysis_result.risk_score || 0)}
+                                                </div>
+                                                <div className="text-white/60 font-poppins text-sm">
+                                                    Score: {analysisData.analysis_result.risk_score || 0}/100
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="bg-blue-500/20 border border-blue-500/30 rounded-xl p-6 text-center">
+                                                <div className="flex items-center justify-center gap-2 mb-2">
+                                                    <Eye className="w-6 h-6 text-blue-400" />
+                                                    <span className="text-blue-300 font-poppins text-sm">Transactions</span>
+                                                </div>
+                                                <div className="text-white font-poppins text-2xl font-bold">
+                                                    {analysisData.analysis_result.transaction_count || 0}
+                                                </div>
+                                                <div className="text-blue-300 font-poppins text-sm">
+                                                    Total found
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="bg-purple-500/20 border border-purple-500/30 rounded-xl p-6 text-center">
+                                                <div className="flex items-center justify-center gap-2 mb-2">
+                                                    <Shield className="w-6 h-6 text-purple-400" />
+                                                    <span className="text-purple-300 font-poppins text-sm">Threat Level</span>
+                                                </div>
+                                                <div className="text-white font-poppins text-2xl font-bold">
+                                                    {analysisData.analysis_result.threat_level || 'UNKNOWN'}
+                                                </div>
+                                                <div className="text-purple-300 font-poppins text-sm">
+                                                    Assessment
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
 
-                    <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
-                        <div className="w-12 h-12 bg-sentry-blue-gray rounded-xl flex items-center justify-center mb-4">
-                            <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm0 4a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1V8zm8 0a1 1 0 011-1h4a1 1 0 011 1v3a1 1 0 01-1 1h-4a1 1 0 01-1-1V8z" clipRule="evenodd" />
-                            </svg>
+                                    {/* AI Analysis */}
+                                    {analysisData.analysis_result?.ai_analysis && (
+                                        <div className="bg-black/20 rounded-2xl p-6">
+                                            <h3 className="text-white font-poppins text-xl font-semibold mb-4">AI Security Analysis</h3>
+                                            <div className="text-white/80 font-poppins leading-relaxed whitespace-pre-wrap">
+                                                {analysisData.analysis_result.ai_analysis}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Raw Data */}
+                                    <details className="bg-black/20 rounded-xl p-4">
+                                        <summary className="text-white font-poppins cursor-pointer mb-2">
+                                            View Raw Analysis Data
+                                        </summary>
+                                        <pre className="text-white/70 font-mono text-xs overflow-auto max-h-60">
+                                            {JSON.stringify(analysisData, null, 2)}
+                                        </pre>
+                                    </details>
+                                </div>
+                            )}
                         </div>
-                        <h3 className="text-white font-poppins text-lg font-semibold mb-2">Privacy First</h3>
-                        <p className="text-white/70 font-poppins text-sm">
-                            Your data never leaves your device. All analysis is performed locally
-                        </p>
+
+                        {/* Quick Actions */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
+                                <div className="w-12 h-12 bg-sentry-sage rounded-xl flex items-center justify-center mb-4">
+                                    <Shield className="w-6 h-6 text-black" />
+                                </div>
+                                <h3 className="text-white font-poppins text-lg font-semibold mb-2">Real-time Protection</h3>
+                                <p className="text-white/70 font-poppins text-sm">
+                                    Continuous monitoring of wallet activity for suspicious behavior patterns
+                                </p>
+                            </div>
+
+                            <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
+                                <div className="w-12 h-12 bg-sentry-accent rounded-xl flex items-center justify-center mb-4">
+                                    <MessageSquare className="w-6 h-6 text-white" />
+                                </div>
+                                <h3 className="text-white font-poppins text-lg font-semibold mb-2">AI Address Tracer</h3>
+                                <p className="text-white/70 font-poppins text-sm">
+                                    Chat with AI to trace and analyze any Solana wallet address
+                                </p>
+                            </div>
+
+                            <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
+                                <div className="w-12 h-12 bg-sentry-blue-gray rounded-xl flex items-center justify-center mb-4">
+                                    <Network className="w-6 h-6 text-white" />
+                                </div>
+                                <h3 className="text-white font-poppins text-lg font-semibold mb-2">Network Analysis</h3>
+                                <p className="text-white/70 font-poppins text-sm">
+                                    Visualize transaction networks and fund flows with interactive graphs
+                                </p>
+                            </div>
+                        </div>
                     </div>
-                </div>
+                )}
+
+                {activeView === 'chat' && (
+                    <ChatBox 
+                        onAddressAnalyze={handleChatAddressAnalyze}
+                        isAnalyzing={isAnalyzing}
+                    />
+                )}
+
+                {activeView === 'network' && (
+                    <div className="space-y-6">
+                        {analysisData?.transaction_graph ? (
+                            <NetworkGraph 
+                                graphData={analysisData.transaction_graph}
+                                height="600px"
+                            />
+                        ) : (
+                            <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-8 text-center">
+                                <Network className="w-16 h-16 text-white/40 mx-auto mb-4" />
+                                <h3 className="text-white font-poppins text-xl font-semibold mb-2">
+                                    No Network Data Available
+                                </h3>
+                                <p className="text-white/60 font-poppins">
+                                    Run a security analysis first to generate the transaction network graph
+                                </p>
+                                <button
+                                    onClick={() => {
+                                        setActiveView('overview');
+                                        startAnalysis();
+                                    }}
+                                    className="mt-4 bg-sentry-accent text-white px-6 py-3 rounded-full font-poppins hover:bg-sentry-accent/80 transition-colors"
+                                >
+                                    Start Analysis
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {activeView === 'flow' && (
+                    <TransactionFlow 
+                        walletAddress={targetAddress || publicKey?.toString() || ''}
+                        isVisible={true}
+                    />
+                )}
             </div>
         </div>
     );
