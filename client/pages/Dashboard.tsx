@@ -122,7 +122,7 @@ export default function Dashboard() {
                     eventSource.close();
                     setIsAnalyzing(false);
                 }
-            }, 30000); // 30 second timeout
+            }, 15000); // 15 second timeout (should be enough for 6 steps)
 
             // Clean up timeout when done
             const originalClose = eventSource.close;
