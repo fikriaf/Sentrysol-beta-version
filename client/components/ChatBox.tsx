@@ -48,7 +48,7 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onAddressAnalyze, isAnalyzing 
 
   const analyzeWithBackend = async (message: string, address?: string) => {
     try {
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+      const backendUrl = window.location.origin; // Use same origin as frontend
 
       // First check if backend is available
       try {
@@ -62,10 +62,10 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onAddressAnalyze, isAnalyzing 
         }
       } catch (healthError) {
         console.error('Backend health check failed:', healthError);
-        throw new Error('Backend server is not running. Please start the Python backend first.');
+        throw new Error('Backend server is not responding.');
       }
 
-      const response = await fetch(`${backendUrl}/chat/analyze`, {
+      const response = await fetch(`${backendUrl}/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
