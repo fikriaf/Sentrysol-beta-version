@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import { handleDemo } from "./routes/demo";
+import { handleHealth, handleAnalyzeWallet, handleChatAnalysis } from "./routes/backend";
 
 export function createServer() {
   const app = express();
@@ -16,6 +17,11 @@ export function createServer() {
   });
 
   app.get("/api/demo", handleDemo);
+
+  // Backend API routes (mock Solana analysis)
+  app.get("/health", handleHealth);
+  app.get("/analyze/:address", handleAnalyzeWallet);
+  app.post("/chat", handleChatAnalysis);
 
   return app;
 }
