@@ -48,7 +48,24 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onAddressAnalyze, isAnalyzing 
 
   const analyzeWithBackend = async (message: string, address?: string) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'}/chat/analyze`, {
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+
+      // First check if backend is available
+      try {
+        const healthCheck = await fetch(`${backendUrl}/health`, {
+          method: 'GET',
+          signal: AbortSignal.timeout(5000) // 5 second timeout
+        });
+
+        if (!healthCheck.ok) {
+          throw new Error(`Backend not available (${healthCheck.status})`);
+        }
+      } catch (healthError) {
+        console.error('Backend health check failed:', healthError);
+        throw new Error('Backend server is not running. Please start the Python backend first.');
+      }
+
+      const response = await fetch(`${backendUrl}/chat/analyze`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -57,16 +74,27 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onAddressAnalyze, isAnalyzing 
           message,
           address
         }),
+        signal: AbortSignal.timeout(10000) // 10 second timeout
       });
 
       if (!response.ok) {
-        throw new Error('Analysis failed');
+        const errorText = await response.text();
+        throw new Error(`Analysis failed: ${response.status} - ${errorText}`);
       }
 
       return await response.json();
     } catch (error) {
       console.error('Backend analysis error:', error);
-      return null;
+
+      if (error.name === 'TimeoutError') {
+        throw new Error('Request timed out. Backend may be slow or unresponsive.');
+      }
+
+      if (error.message.includes('Failed to fetch')) {
+        throw new Error('Cannot connect to backend. Make sure the Python server is running on port 8000.');
+      }
+
+      throw error;
     }
   };
 
