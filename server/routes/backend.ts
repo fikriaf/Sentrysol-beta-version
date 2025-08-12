@@ -48,7 +48,7 @@ export function handleAnalyzeWallet(req: Request, res: Response) {
         },
         network_data: {
           nodes: generateMockNodes(address),
-          edges: generateMockEdges()
+          edges: []
         },
         transaction_flow: generateMockTransactionFlow(),
         ai_analysis: "This wallet shows typical trading patterns with moderate risk indicators. The transaction frequency and amounts suggest automated trading activity."
