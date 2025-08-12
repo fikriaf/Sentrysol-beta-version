@@ -93,11 +93,9 @@ export default function Dashboard() {
             };
 
             eventSource.onerror = function(event) {
-                console.error('EventSource error details:', {
-                    event,
-                    readyState: eventSource.readyState,
-                    url: analyzeUrl
-                });
+                console.error('EventSource error:', event);
+                console.error('EventSource readyState:', eventSource.readyState);
+                console.error('EventSource url:', analyzeUrl);
 
                 const readyStateMap = {
                     0: 'CONNECTING',
@@ -108,6 +106,13 @@ export default function Dashboard() {
                 const stateText = readyStateMap[eventSource.readyState] || 'UNKNOWN';
 
                 setLogs(prev => [...prev, `Connection Error: EventSource state is ${stateText}`]);
+
+                // If connection failed to establish
+                if (eventSource.readyState === 2) {
+                    setLogs(prev => [...prev, 'Analysis stream connection failed']);
+                    eventSource.close();
+                    setIsAnalyzing(false);
+                }
                 setLogs(prev => [...prev, 'This usually means the backend server is not running']);
                 setLogs(prev => [...prev, 'Please start the Python backend server first']);
 
