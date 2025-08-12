@@ -71,9 +71,9 @@ export function handleAnalyzeWallet(req: Request, res: Response) {
         // Last step includes complete data
         if (currentStep === steps.length) {
           res.write(`data: [DONE]\n\n`);
-          res.end();
+          setTimeout(() => res.end(), 100); // Small delay before ending
         } else {
-          setTimeout(sendStep, 1500); // 1.5 second delay between steps
+          setTimeout(sendStep, 1000); // Reduced to 1 second delay between steps
         }
       }
     } catch (error) {
