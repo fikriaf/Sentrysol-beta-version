@@ -189,7 +189,7 @@ export default function Dashboard() {
                         if (data.status) {
                             const stepInfo = data.step ? `Step ${data.step}: ` : '';
                             const progressInfo = data.progress !== undefined ? ` (${data.progress}%)` : '';
-                            const elapsedSeconds = Math.floor((Date.now() - analysisStartTime) / 1000000000);
+                            const elapsedSeconds = Math.floor((Date.now() - analysisStartTime) / 1000);
                             const timeInfo = ` [${elapsedSeconds}s]`;
                             setLogs(prev => [...prev, `${stepInfo}${data.status}${progressInfo}${timeInfo}`]);
                             
@@ -540,7 +540,7 @@ export default function Dashboard() {
                                         <span className="text-white/70 font-poppins">Analysis Progress</span>
                                         <div className="flex items-center gap-4">
                                             <span className="text-white/60 font-poppins text-sm">
-                                                {Math.floor((Date.now() - analysisStartTime) / 1000)}s elapsed
+                                              {analysisStartTime > 0 ? Math.floor((Date.now() - analysisStartTime) / 1000) : 0}s elapsed
                                             </span>
                                             <span className="text-white font-poppins">{progress}%</span>
                                         </div>
