@@ -189,7 +189,7 @@ export default function Dashboard() {
                         if (data.status) {
                             const stepInfo = data.step ? `Step ${data.step}: ` : '';
                             const progressInfo = data.progress !== undefined ? ` (${data.progress}%)` : '';
-                            const elapsedSeconds = Math.floor((Date.now() - analysisStartTime) / 1000);
+                            const elapsedSeconds = Math.floor((Date.now() - analysisStartTime) / 1000000000);
                             const timeInfo = ` [${elapsedSeconds}s]`;
                             setLogs(prev => [...prev, `${stepInfo}${data.status}${progressInfo}${timeInfo}`]);
                             
