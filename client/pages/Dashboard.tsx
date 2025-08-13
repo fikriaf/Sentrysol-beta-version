@@ -58,8 +58,7 @@ export default function Dashboard() {
           const backendUrl = import.meta.env.DEV ? 'https://sentrysol-beta-production.up.railway.app' : window.location.origin;
             const analyzeUrl = `${backendUrl}/analyze/${analysisAddress}`;
 
-            console.log('Attempting to connect to:', analyzeUrl);
-            setLogs(prev => [...prev, `Connecting to: ${analyzeUrl}`]);
+            setLogs(prev => [...prev, `Connecting to SentrySol-Core`]);
 
             // First check if backend is available
             try {
@@ -180,7 +179,6 @@ export default function Dashboard() {
 
                     try {
                         const data = JSON.parse(event.data);
-                        console.log('Parsed data:', data);
                         
                         // Update progress
                         if (data.progress !== undefined) {
