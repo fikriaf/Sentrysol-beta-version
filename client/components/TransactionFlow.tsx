@@ -53,7 +53,7 @@ export const TransactionFlow: React.FC<TransactionFlowProps> = ({ walletAddress,
     
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'}/transaction-flow/${walletAddress}?limit=100`
+        `${import.meta.env.VITE_BACKEND_URL || 'https://sentrysol-beta-production.up.railway.app'}/transaction-flow/${walletAddress}?limit=100`
       );
       
       if (!response.ok) {
