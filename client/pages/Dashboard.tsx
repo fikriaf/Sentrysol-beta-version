@@ -201,8 +201,8 @@ export default function Dashboard() {
               setLogs(prev => [...prev, `${stepInfo}${data.status}${progressInfo}${timeInfo}`]);
 
               // Special message for AI analysis
-              if (data.step === 7 || data.progress >= 95) {
-                setLogs(prev => [...prev, 'AI analysis is running - this process takes time...']);
+              if (data.step === 7 && data.progress >= 95) {
+                setLogs(prev => [...prev, 'SentrySol-Core analysis is running - this process takes time...']);
               }
             }
 
