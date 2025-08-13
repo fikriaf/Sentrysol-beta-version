@@ -158,12 +158,12 @@ export default function Dashboard() {
 
                     // Handle completion
                     if (event.data === '[DONE]') {
-                        const totalTime = Math.floor((Date.now() - analysisStartTime) / 1000);
-                        setLogs(prev => [...prev, `Analysis completed successfully in ${totalTime}s!`]);
-                        cleanup();
-                        setIsAnalyzing(false);
-                        setProgress(100);
-                        return;
+                      const totalTime = Math.floor((Date.now() - analysisStartTime) / 1000);
+                      setLogs(prev => [...prev, `Analysis completed successfully in ${totalTime}s!`]);
+                      cleanup();
+                      setIsAnalyzing(false);
+                      setProgress(100);
+                      return;
                     }
 
                     // Handle keepalive messages
