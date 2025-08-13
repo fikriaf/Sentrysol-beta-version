@@ -15,6 +15,25 @@ export default function Dashboard() {
     const [logs, setLogs] = useState<string[]>([]);
     const [activeView, setActiveView] = useState<'overview' | 'chat' | 'network' | 'flow'>('overview');
     const [targetAddress, setTargetAddress] = useState<string>('');
+    const [analysisTimeout, setAnalysisTimeout] = useState<NodeJS.Timeout | null>(null);
+    const [connectionTimeout, setConnectionTimeout] = useState<NodeJS.Timeout | null>(null);
+    const [analysisStartTime, setAnalysisStartTime] = useState<number>(0);
+
+    const stopAnalysis = () => {
+        setLogs(prev => [...prev, '🛑 Analysis stopped by user']);
+        setIsAnalyzing(false);
+        setProgress(0);
+        
+        // Clear all timeouts
+        if (analysisTimeout) {
+            clearTimeout(analysisTimeout);
+            setAnalysisTimeout(null);
+        }
+        if (connectionTimeout) {
+            clearTimeout(connectionTimeout);
+            setConnectionTimeout(null);
+        }
+    };
 
     const startAnalysis = async (addressToAnalyze?: string) => {
         const analysisAddress = addressToAnalyze || publicKey?.toString();
@@ -25,6 +44,14 @@ export default function Dashboard() {
         setLogs([]);
         setAnalysisData(null);
         setTargetAddress(analysisAddress);
+        setAnalysisStartTime(Date.now());
+
+        // Set overall analysis timeout (10 minutes)
+        const overallTimeout = setTimeout(() => {
+            setLogs(prev => [...prev, 'Analysis timeout reached (10 minutes) - stopping analysis']);
+            setIsAnalyzing(false);
+        }, 10 * 60 * 1000);
+        setAnalysisTimeout(overallTimeout);
 
         try {
             // Connect to the Python backend analysis endpoint
@@ -51,88 +78,234 @@ export default function Dashboard() {
                 setLogs(prev => [...prev, `Backend Error: ${healthError.message}`]);
                 setLogs(prev => [...prev, 'Note: Backend service is not responding']);
                 setIsAnalyzing(false);
+                if (analysisTimeout) clearTimeout(analysisTimeout);
                 return;
             }
 
-            const eventSource = new EventSource(analyzeUrl);
+            let eventSource: EventSource;
+            let lastActivityTime = Date.now();
+            let keepAliveInterval: NodeJS.Timeout;
+            let connectionCheckInterval: NodeJS.Timeout;
+            let isManuallyStoped = false;
 
-            eventSource.onopen = function(event) {
-                console.log('EventSource connection opened:', event);
-                setLogs(prev => [...prev, 'Successfully connected to analysis stream']);
-            };
-
-            eventSource.onmessage = function(event) {
-                console.log('EventSource message received:', event.data);
-
-                if (event.data === '[DONE]') {
+            const connectToStream = () => {
+                if (eventSource && eventSource.readyState !== 2) {
                     eventSource.close();
-                    setIsAnalyzing(false);
-                    setLogs(prev => [...prev, 'Analysis completed successfully']);
-                    return;
                 }
 
-                try {
-                    const data = JSON.parse(event.data);
-                    setProgress(data.progress || 0);
+                eventSource = new EventSource(analyzeUrl);
+                lastActivityTime = Date.now();
 
-                    if (data.status) {
-                        setLogs(prev => [...prev, `Step ${data.step || 0}: ${data.status} (${data.progress || 0}%)`]);
+                // Enhanced keep alive checker with connection timeout
+                keepAliveInterval = setInterval(() => {
+                    if (eventSource.readyState === 1) {
+                        const timeSinceActivity = Date.now() - lastActivityTime;
+                        const totalAnalysisTime = Date.now() - analysisStartTime;
+                        
+                        if (timeSinceActivity > 120000) { // 2 minutes without activity = timeout
+                            setLogs(prev => [...prev, 'Connection timeout - no activity for 2 minutes']);
+                            setLogs(prev => [...prev, '❌ Closing connection due to timeout']);
+                            cleanup();
+                            setIsAnalyzing(false);
+                            return;
+                        } else if (timeSinceActivity > 60000) { // 1 minute warning
+                            const remainingTime = Math.ceil((120000 - timeSinceActivity) / 1000);
+                            setLogs(prev => [...prev, `No activity for ${Math.floor(timeSinceActivity/1000)}s (timeout in ${remainingTime}s)`]);
+                        }
+                        
+                        // Show total analysis time every minute
+                        if (totalAnalysisTime > 60000 && totalAnalysisTime % 60000 < 30000) {
+                            const minutes = Math.floor(totalAnalysisTime / 60000);
+                            setLogs(prev => [...prev, `Analysis running for ${minutes} minute(s)...`]);
+                        }
                     }
+                }, 30000); // Check every 30 seconds
 
-                    if (data.data || data.analysis_result || data.detailed_data || data.transaction_graph) {
-                        setAnalysisData(data.data || data);
+                // Connection health checker with timeout handling
+                connectionCheckInterval = setInterval(() => {
+                    if (eventSource.readyState === 2 && !isManuallyStoped) { // Connection closed
+                        const timeSinceStart = Date.now() - analysisStartTime;
+                        
+                        if (timeSinceStart > 8 * 60 * 1000) { // Don't reconnect after 8 minutes
+                            setLogs(prev => [...prev, 'Maximum analysis time reached - not reconnecting']);
+                            cleanup();
+                            setIsAnalyzing(false);
+                            return;
+                        }
+                        
+                        setLogs(prev => [...prev, '🔄 Connection lost, attempting reconnect...']);
+                        clearInterval(keepAliveInterval);
+                        clearInterval(connectionCheckInterval);
+                        
+                        // Exponential backoff for reconnection
+                        const reconnectDelay = Math.min(5000, 1000 + Math.random() * 2000);
+                        setTimeout(() => {
+                            if (!isManuallyStoped) {
+                                connectToStream();
+                            }
+                        }, reconnectDelay);
                     }
+                }, 5000); // Check every 5 seconds
 
-                    if (data.error) {
-                        setLogs(prev => [...prev, `Error: ${data.status || 'Unknown error occurred'}`]);
-                    }
-                } catch (e) {
-                    console.error('Error parsing EventSource data:', e, 'Raw data:', event.data);
-                    setLogs(prev => [...prev, `Parse Error: ${e.message}`]);
-                }
-            };
-
-            eventSource.onerror = function(event) {
-                console.error('EventSource error:', event);
-                console.error('EventSource readyState:', eventSource.readyState);
-                console.error('EventSource url:', analyzeUrl);
-
-                const readyStateMap = {
-                    0: 'CONNECTING',
-                    1: 'OPEN',
-                    2: 'CLOSED'
+                eventSource.onopen = function(event) {
+                    console.log('EventSource connection opened:', event);
+                    setLogs(prev => [...prev, '✅ Successfully connected to analysis stream']);
+                    lastActivityTime = Date.now();
                 };
 
-                const stateText = readyStateMap[eventSource.readyState] || 'UNKNOWN';
+                eventSource.onmessage = function(event) {
+                    lastActivityTime = Date.now(); // Reset activity timer
+                    console.log('EventSource message received:', event.data);
 
-                setLogs(prev => [...prev, `Connection Error: EventSource state is ${stateText}`]);
+                    // Handle completion
+                    if (event.data === '[DONE]') {
+                        const totalTime = Math.floor((Date.now() - analysisStartTime) / 1000);
+                        setLogs(prev => [...prev, `Analysis completed successfully in ${totalTime}s!`]);
+                        cleanup();
+                        setIsAnalyzing(false);
+                        setProgress(100);
+                        return;
+                    }
 
-                // If connection failed to establish or lost connection
-                if (eventSource.readyState === 2) {
-                    setLogs(prev => [...prev, 'Analysis stream connection lost']);
+                    // Handle keepalive messages
+                    if (event.data === 'keepalive' || event.data === 'ping' || event.data.includes('heartbeat')) {
+                        setLogs(prev => [...prev, 'Heartbeat received - connection active']);
+                        return;
+                    }
+
+                    // Handle empty messages
+                    if (!event.data || event.data.trim() === '') {
+                        return;
+                    }
+
+                    try {
+                        const data = JSON.parse(event.data);
+                        console.log('Parsed data:', data);
+                        
+                        // Update progress
+                        if (data.progress !== undefined) {
+                            setProgress(data.progress);
+                        }
+
+                        // Update status dan logs
+                        if (data.status) {
+                            const stepInfo = data.step ? `Step ${data.step}: ` : '';
+                            const progressInfo = data.progress !== undefined ? ` (${data.progress}%)` : '';
+                            const timeInfo = ` [${Math.floor((Date.now() - analysisStartTime) / 1000)}s]`;
+                            setLogs(prev => [...prev, `${stepInfo}${data.status}${progressInfo}${timeInfo}`]);
+                            
+                            // Special message for AI analysis
+                            if (data.step === 7 || data.progress >= 90) {
+                                setLogs(prev => [...prev, 'AI analysis is running - this process takes time...']);
+                            }
+                        }
+
+                        // Handle analysis result data
+                        if (data.data || data.analysis_result || data.detailed_data || data.transaction_graph || data.threat_analysis) {
+                            const finalData = data.data || data;
+                            console.log('Setting analysis data:', finalData);
+                            setAnalysisData(finalData);
+                            
+                            if (finalData.analysis_result || finalData.detailed_data) {
+                                setLogs(prev => [...prev, 'Analysis data received, processing results...']);
+                            }
+                        }
+
+                        // Handle error but don't disconnect
+                        if (data.error) {
+                            setLogs(prev => [...prev, `⚠️ Warning: ${data.error}`]);
+                            // Don't disconnect unless critical error
+                            if (data.critical === true) {
+                                setLogs(prev => [...prev, '❌ Critical error detected, stopping analysis']);
+                                cleanup();
+                                setIsAnalyzing(false);
+                            } else {
+                                setLogs(prev => [...prev, 'Non-critical error, continuing analysis...']);
+                            }
+                        }
+
+                    } catch (parseError) {
+                        console.error('Error parsing EventSource data:', parseError, 'Raw data:', event.data);
+                        setLogs(prev => [...prev, `⚠️ Parse error: ${parseError.message}`]);
+                        
+                        // Try to extract data from corrupted response
+                        if (event.data.includes('"analysis_result"') || event.data.includes('"detailed_data"')) {
+                            try {
+                                const jsonMatch = event.data.match(/\{[\s\S]*\}/);
+                                if (jsonMatch) {
+                                    const extractedData = JSON.parse(jsonMatch[0]);
+                                    setAnalysisData(extractedData);
+                                    setLogs(prev => [...prev, '✅ Successfully extracted data from corrupted response']);
+                                }
+                            } catch (extractError) {
+                                console.error('Failed to extract JSON:', extractError);
+                            }
+                        }
+                        
+                        // Don't disconnect due to parse error
+                        setLogs(prev => [...prev, '🔄 Continuing streaming despite parse error...']);
+                    }
+                };
+
+                eventSource.onerror = function(event) {
+                    console.error('EventSource error:', event);
+                    
+                    const readyState = eventSource.readyState;
+                    const stateNames = ['CONNECTING', 'OPEN', 'CLOSED'];
+                    const stateName = stateNames[readyState] || 'UNKNOWN';
+                    
+                    setLogs(prev => [...prev, `🔗 Connection state: ${stateName} (${readyState})`]);
+
+                    // Only log error, don't disconnect immediately
+                    if (readyState === 0) { // CONNECTING
+                        setLogs(prev => [...prev, '🔄 Attempting to connect...']);
+                    } else if (readyState === 1) { // OPEN
+                        setLogs(prev => [...prev, '✅ Connection still active, waiting for data...']);
+                    } else if (readyState === 2) { // CLOSED
+                        setLogs(prev => [...prev, '❌ Connection closed']);
+                        // Reconnection will be handled by connectionCheckInterval
+                    }
+                };
+            };
+
+            const cleanup = () => {
+                isManuallyStoped = true;
+                if (keepAliveInterval) clearInterval(keepAliveInterval);
+                if (connectionCheckInterval) clearInterval(connectionCheckInterval);
+                if (analysisTimeout) {
+                    clearTimeout(analysisTimeout);
+                    setAnalysisTimeout(null);
+                }
+                if (connectionTimeout) {
+                    clearTimeout(connectionTimeout);
+                    setConnectionTimeout(null);
+                }
+                if (eventSource && eventSource.readyState !== 2) {
                     eventSource.close();
-                    setIsAnalyzing(false);
                 }
             };
 
-            // Set a timeout to close connection if it takes too long
-            const timeout = setTimeout(() => {
-                if (eventSource.readyState !== 2) {
-                    setLogs(prev => [...prev, 'Analysis timeout - closing connection']);
-                    eventSource.close();
-                    setIsAnalyzing(false);
-                }
-            }, 15000); // 15 second timeout (should be enough for 6 steps)
+            // Mulai koneksi pertama
+            connectToStream();
 
-            // Clean up timeout when done
-            const originalClose = eventSource.close;
-            eventSource.close = function() {
-                clearTimeout(timeout);
-                originalClose.call(this);
+            // Cleanup function untuk komponen unmount
+            const handleBeforeUnload = () => {
+                cleanup();
             };
+
+            window.addEventListener('beforeunload', handleBeforeUnload);
+
+            // Return cleanup function
+            return () => {
+                window.removeEventListener('beforeunload', handleBeforeUnload);
+                cleanup();
+            };
+
         } catch (error) {
             console.error('Analysis error:', error);
+            setLogs(prev => [...prev, `❌ Error: ${error.message}`]);
             setIsAnalyzing(false);
+            if (analysisTimeout) clearTimeout(analysisTimeout);
         }
     };
 
@@ -158,6 +331,64 @@ export default function Dashboard() {
         if (riskScore < 30) return 'LOW';
         if (riskScore < 70) return 'MEDIUM';
         return 'HIGH';
+    };
+
+    const parseAnalysisResult = (rawResult: any) => {
+        try {
+            if (typeof rawResult === 'string') {
+                let cleanResult = rawResult;
+                if (rawResult.startsWith('```json\n')) {
+                    cleanResult = rawResult.replace(/^```json\n/, '').replace(/\n```$/, '');
+                } else if (rawResult.startsWith('```\n')) {
+                    cleanResult = rawResult.replace(/^```\n/, '').replace(/\n```$/, '');
+                }
+                return JSON.parse(cleanResult);
+            } else {
+                return rawResult;
+            }
+        } catch (e) {
+            console.error('Failed to parse analysis result:', e);
+            return null;
+        }
+    };
+
+    const formatThreatAnalysis = (threatData: any) => {
+        if (!threatData || !threatData.threat_analysis) return null;
+        
+        const analysis = threatData.threat_analysis;
+        return {
+            overallRiskLevel: analysis.overall_risk_level,
+            riskScore: analysis.risk_score,
+            metadata: analysis.metadata,
+            potentialThreats: analysis.potential_threats || [],
+            ioc: analysis.ioc
+        };
+    };
+
+    const getThreatCardBorderColor = (confidence: string) => {
+        switch (confidence?.toLowerCase()) {
+            case 'high':
+                return 'border-l-red-500';
+            case 'medium':
+                return 'border-l-yellow-500';
+            case 'low':
+                return 'border-l-blue-500';
+            default:
+                return 'border-l-gray-500';
+        }
+    };
+
+    const getConfidenceBadgeColor = (confidence: string) => {
+        switch (confidence?.toLowerCase()) {
+            case 'high':
+                return 'bg-red-500/20 text-red-300';
+            case 'medium':
+                return 'bg-yellow-500/20 text-yellow-300';
+            case 'low':
+                return 'bg-blue-500/20 text-blue-300';
+            default:
+                return 'bg-gray-500/20 text-gray-300';
+        }
     };
 
     if (!connected) {
@@ -284,21 +515,36 @@ export default function Dashboard() {
                                 <h2 className="text-white font-poppins text-2xl font-bold">
                                     Security Analysis
                                 </h2>
-                                <button
-                                    onClick={() => startAnalysis()}
-                                    disabled={isAnalyzing}
-                                    className="bg-sentry-sage text-black font-poppins text-lg font-normal px-6 py-3 rounded-full hover:bg-sentry-sage/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    {isAnalyzing ? 'Analyzing...' : 'Start Analysis'}
-                                </button>
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={() => startAnalysis()}
+                                        disabled={isAnalyzing}
+                                        className="bg-sentry-sage text-black font-poppins text-lg font-normal px-6 py-3 rounded-full hover:bg-sentry-sage/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {isAnalyzing ? 'Analyzing...' : 'Start Analysis'}
+                                    </button>
+                                    {isAnalyzing && (
+                                        <button
+                                            onClick={stopAnalysis}
+                                            className="bg-red-500 text-white font-poppins text-lg font-normal px-6 py-3 rounded-full hover:bg-red-600 transition-colors"
+                                        >
+                                            Stop
+                                        </button>
+                                    )}
+                                </div>
                             </div>
 
-                            {/* Progress Bar */}
+                            {/* Progress Bar with elapsed time */}
                             {isAnalyzing && (
                                 <div className="mb-6">
                                     <div className="flex justify-between items-center mb-2">
                                         <span className="text-white/70 font-poppins">Analysis Progress</span>
-                                        <span className="text-white font-poppins">{progress}%</span>
+                                        <div className="flex items-center gap-4">
+                                            <span className="text-white/60 font-poppins text-sm">
+                                                {Math.floor((Date.now() - analysisStartTime) / 1000)}s elapsed
+                                            </span>
+                                            <span className="text-white font-poppins">{progress}%</span>
+                                        </div>
                                     </div>
                                     <div className="w-full bg-black/20 rounded-full h-3">
                                         <div 
@@ -306,15 +552,29 @@ export default function Dashboard() {
                                             style={{ width: `${progress}%` }}
                                         ></div>
                                     </div>
+                                    <div className="mt-2 text-center">
+                                        <span className="text-white/50 font-poppins text-xs">
+                                            Maximum analysis time: 10 minutes | Connection timeout: 2 minutes of inactivity
+                                        </span>
+                                    </div>
                                 </div>
                             )}
 
-                            {/* Logs */}
+                            {/* Enhanced Logs with scroll to bottom */}
                             {logs.length > 0 && (
-                                <div className="bg-black/20 rounded-2xl p-4 mb-6 max-h-60 overflow-y-auto">
-                                    <h3 className="text-white font-poppins text-lg font-semibold mb-3">Analysis Logs</h3>
+                                <div className="bg-black/20 rounded-2xl p-4 mb-6 max-h-60 overflow-y-auto" ref={(el) => el?.scrollTo(0, el.scrollHeight)}>
+                                    <div className="flex justify-between items-center mb-3">
+                                        <h3 className="text-white font-poppins text-lg font-semibold">Analysis Logs</h3>
+                                        <button
+                                            onClick={() => setLogs([])}
+                                            className="text-white/60 hover:text-white text-sm font-poppins"
+                                        >
+                                            Clear
+                                        </button>
+                                    </div>
                                     {logs.map((log, index) => (
                                         <div key={index} className="text-white/70 font-mono text-sm mb-2 p-2 bg-black/20 rounded">
+                                            <span className="text-white/50 mr-2">{new Date().toLocaleTimeString()}</span>
                                             {log}
                                         </div>
                                     ))}
@@ -324,109 +584,421 @@ export default function Dashboard() {
                             {/* Analysis Results */}
                             {analysisData && (
                                 <div className="space-y-6">
-                                    {/* Risk Assessment */}
-                                    {analysisData.analysis_result && (
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                            <div className={`${getRiskBgColor(analysisData.analysis_result.risk_score || 0)} border rounded-xl p-6 text-center`}>
-                                                <div className="flex items-center justify-center gap-2 mb-2">
-                                                    {analysisData.analysis_result.risk_score < 30 ? (
-                                                        <CheckCircle className="w-6 h-6 text-green-400" />
-                                                    ) : analysisData.analysis_result.risk_score < 70 ? (
-                                                        <Clock className="w-6 h-6 text-yellow-400" />
-                                                    ) : (
-                                                        <AlertTriangle className="w-6 h-6 text-red-400" />
-                                                    )}
-                                                    <span className="text-white/70 font-poppins text-sm">Risk Level</span>
-                                                </div>
-                                                <div className={`font-poppins text-2xl font-bold ${getRiskColor(analysisData.analysis_result.risk_score || 0)}`}>
-                                                    {getRiskLevel(analysisData.analysis_result.risk_score || 0)}
-                                                </div>
-                                                <div className="text-white/60 font-poppins text-sm">
-                                                    Score: {analysisData.analysis_result.risk_score || 0}/100
-                                                </div>
-                                            </div>
-                                            
-                                            <div className="bg-blue-500/20 border border-blue-500/30 rounded-xl p-6 text-center">
-                                                <div className="flex items-center justify-center gap-2 mb-2">
-                                                    <Eye className="w-6 h-6 text-blue-400" />
-                                                    <span className="text-blue-300 font-poppins text-sm">Transactions</span>
-                                                </div>
-                                                <div className="text-white font-poppins text-2xl font-bold">
-                                                    {analysisData.analysis_result.transaction_count || 0}
-                                                </div>
-                                                <div className="text-blue-300 font-poppins text-sm">
-                                                    Total found
-                                                </div>
-                                            </div>
-                                            
-                                            <div className="bg-purple-500/20 border border-purple-500/30 rounded-xl p-6 text-center">
-                                                <div className="flex items-center justify-center gap-2 mb-2">
-                                                    <Shield className="w-6 h-6 text-purple-400" />
-                                                    <span className="text-purple-300 font-poppins text-sm">Threat Level</span>
-                                                </div>
-                                                <div className="text-white font-poppins text-2xl font-bold">
-                                                    {analysisData.analysis_result.threat_level || 'UNKNOWN'}
-                                                </div>
-                                                <div className="text-purple-300 font-poppins text-sm">
-                                                    Assessment
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
+                                    {(() => {
+                                        // Parse threat analysis
+                                        let threatAnalysis = null;
+                                        let parsedAnalysis = null;
+                                        
+                                        if (analysisData.analysis_result) {
+                                            parsedAnalysis = parseAnalysisResult(analysisData.analysis_result);
+                                            if (parsedAnalysis && parsedAnalysis.threat_analysis) {
+                                                threatAnalysis = formatThreatAnalysis(parsedAnalysis);
+                                            }
+                                        }
 
-                                    {/* AI Analysis */}
-                                    {analysisData.analysis_result?.ai_analysis && (
-                                        <div className="bg-black/20 rounded-2xl p-6">
-                                            <h3 className="text-white font-poppins text-xl font-semibold mb-4">AI Security Analysis</h3>
-                                            <div className="text-white/80 font-poppins leading-relaxed whitespace-pre-wrap">
-                                                {analysisData.analysis_result.ai_analysis}
-                                            </div>
-                                        </div>
-                                    )}
+                                        return (
+                                            <>
+                                                {/* Threat Analysis Section */}
+                                                {threatAnalysis && (
+                                                    <div className="space-y-6">
+                                                        {/* Overall Risk Level */}
+                                                        <div className={`${getRiskBgColor(threatAnalysis.riskScore)} border rounded-xl p-6 text-center`}>
+                                                            <div className="flex items-center justify-center gap-3 mb-2">
+                                                                {threatAnalysis.riskScore < 30 ? (
+                                                                    <CheckCircle className="w-8 h-8 text-green-400" />
+                                                                ) : threatAnalysis.riskScore < 70 ? (
+                                                                    <Clock className="w-8 h-8 text-yellow-400" />
+                                                                ) : (
+                                                                    <AlertTriangle className="w-8 h-8 text-red-400" />
+                                                                )}
+                                                                <span className="text-white font-poppins text-lg">Overall Risk Level</span>
+                                                            </div>
+                                                            <div className={`font-poppins text-3xl font-bold ${getRiskColor(threatAnalysis.riskScore)} mb-2`}>
+                                                                {threatAnalysis.overallRiskLevel}
+                                                            </div>
+                                                            <div className="text-white/60 font-poppins">
+                                                                Score: {threatAnalysis.riskScore}/100
+                                                            </div>
+                                                        </div>
 
-                                    {/* Raw Data */}
-                                    <details className="bg-black/20 rounded-xl p-4">
-                                        <summary className="text-white font-poppins cursor-pointer mb-2">
-                                            View Raw Analysis Data
-                                        </summary>
-                                        <pre className="text-white/70 font-mono text-xs overflow-auto max-h-60">
-                                            {JSON.stringify(analysisData, null, 2)}
-                                        </pre>
-                                    </details>
+                                                        {/* Metadata Grid */}
+                                                        {threatAnalysis.metadata && (
+                                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                                                <div className="bg-white/5 rounded-xl p-4 text-center">
+                                                                    <div className="flex items-center justify-center gap-2 mb-2">
+                                                                        <Eye className="w-5 h-5 text-blue-400" />
+                                                                        <span className="text-white/70 font-poppins text-sm">Target Address</span>
+                                                                    </div>
+                                                                    <div className="text-white font-mono text-sm">
+                                                                        {threatAnalysis.metadata.target_address ? 
+                                                                            `${threatAnalysis.metadata.target_address.substring(0, 8)}...${threatAnalysis.metadata.target_address.substring(threatAnalysis.metadata.target_address.length - 8)}` : 
+                                                                            'N/A'
+                                                                        }
+                                                                    </div>
+                                                                </div>
+                                                                <div className="bg-white/5 rounded-xl p-4 text-center">
+                                                                    <div className="flex items-center justify-center gap-2 mb-2">
+                                                                        <Network className="w-5 h-5 text-purple-400" />
+                                                                        <span className="text-white/70 font-poppins text-sm">Chain</span>
+                                                                    </div>
+                                                                    <div className="text-white font-poppins text-lg font-bold">
+                                                                        {threatAnalysis.metadata.chain || 'Solana'}
+                                                                    </div>
+                                                                </div>
+                                                                <div className="bg-white/5 rounded-xl p-4 text-center">
+                                                                    <div className="flex items-center justify-center gap-2 mb-2">
+                                                                        <Shield className="w-5 h-5 text-green-400" />
+                                                                        <span className="text-white/70 font-poppins text-sm">Data Sources</span>
+                                                                    </div>
+                                                                    <div className="text-white font-poppins text-lg font-bold">
+                                                                        {threatAnalysis.metadata.data_sources?.length || 0}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Potential Threats */}
+                                                        {threatAnalysis.potentialThreats && threatAnalysis.potentialThreats.length > 0 && (
+                                                            <div className="space-y-6">
+                                                                <h3 className="text-white font-poppins text-2xl font-semibold flex items-center gap-2">
+                                                                    <AlertTriangle className="w-6 h-6 text-red-400" />
+                                                                    Identified Threats
+                                                                </h3>
+                                                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                                                    {threatAnalysis.potentialThreats.map((threat: any, index: number) => (
+                                                                        <div key={index} className={`bg-black/20 border-l-4 ${getThreatCardBorderColor(threat.confidence)} rounded-xl p-6`}>
+                                                                            <div className="flex justify-between items-center mb-4">
+                                                                                <h4 className="text-white font-poppins text-lg font-semibold">
+                                                                                    {threat.threat_type}
+                                                                                </h4>
+                                                                                <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getConfidenceBadgeColor(threat.confidence)}`}>
+                                                                                    {threat.confidence}
+                                                                                </span>
+                                                                            </div>
+                                                                            
+                                                                            <p className="text-white/80 font-poppins mb-4 leading-relaxed">
+                                                                                {threat.reason}
+                                                                            </p>
+
+                                                                            {/* Supporting Evidence */}
+                                                                            {threat.supporting_evidence && (
+                                                                                <div className="bg-white/5 rounded-lg p-4 mb-4">
+                                                                                    <h5 className="text-white/70 font-poppins text-sm font-semibold mb-3 flex items-center gap-2">
+                                                                                        <Eye className="w-4 h-4" />
+                                                                                        Supporting Evidence
+                                                                                    </h5>
+                                                                                    {Object.entries(threat.supporting_evidence).map(([key, value]) => (
+                                                                                        <div key={key} className="text-white/70 font-poppins text-sm mb-2 pb-2 border-b border-white/10 last:border-b-0">
+                                                                                            <strong className="text-white">{key.replace(/_/g, ' ').toUpperCase()}:</strong> {String(value)}
+                                                                                        </div>
+                                                                                    ))}
+                                                                                </div>
+                                                                            )}
+
+                                                                            {/* Recommended Actions */}
+                                                                            {threat.recommended_actions && threat.recommended_actions.length > 0 && (
+                                                                                <div className="bg-white/5 rounded-lg p-4">
+                                                                                    <h5 className="text-white/70 font-poppins text-sm font-semibold mb-3 flex items-center gap-2">
+                                                                                        <CheckCircle className="w-4 h-4" />
+                                                                                        Recommended Actions
+                                                                                    </h5>
+                                                                                    {threat.recommended_actions.map((action: string, actionIndex: number) => (
+                                                                                        <div key={actionIndex} className="text-white/70 font-poppins text-sm mb-2 pb-2 border-b border-white/10 last:border-b-0">
+                                                                                            {action}
+                                                                                        </div>
+                                                                                    ))}
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {/* IOC (Indicators of Compromise) */}
+                                                        {threatAnalysis.ioc && (
+                                                            <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-2xl p-6">
+                                                                <h3 className="text-yellow-400 font-poppins text-2xl font-semibold mb-6 flex items-center gap-2">
+                                                                    <AlertTriangle className="w-6 h-6" />
+                                                                    Indicators of Compromise
+                                                                </h3>
+                                                                
+                                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                                                                    {threatAnalysis.ioc.addresses && threatAnalysis.ioc.addresses.length > 0 && (
+                                                                        <div className="bg-black/20 rounded-xl p-4">
+                                                                            <h4 className="text-white font-poppins font-semibold mb-3 flex items-center gap-2">
+                                                                                <Eye className="w-4 h-4 text-blue-400" />
+                                                                                Addresses
+                                                                            </h4>
+                                                                            <div className="space-y-2 max-h-40 overflow-y-auto">
+                                                                                {threatAnalysis.ioc.addresses.map((addr: string, index: number) => (
+                                                                                    <div key={index} className="bg-white/5 rounded p-2 font-mono text-xs text-white/80 break-all">
+                                                                                        {addr.substring(0, 6)}...{addr.substring(addr.length - 4)}
+                                                                                    </div>
+                                                                                ))}
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+
+                                                                    {threatAnalysis.ioc.transaction_signatures && threatAnalysis.ioc.transaction_signatures.length > 0 && (
+                                                                        <div className="bg-black/20 rounded-xl p-4">
+                                                                            <h4 className="text-white font-poppins font-semibold mb-3 flex items-center gap-2">
+                                                                                <Activity className="w-4 h-4 text-green-400" />
+                                                                                Transaction Signatures
+                                                                            </h4>
+                                                                            <div className="space-y-2 max-h-40 overflow-y-auto">
+                                                                                {threatAnalysis.ioc.transaction_signatures.map((sig: string, index: number) => (
+                                                                                    <div key={index} className="bg-white/5 rounded p-2 font-mono text-xs text-white/80 break-all">
+                                                                                        {sig.substring(0, 8)}...{sig.substring(sig.length - 8)}
+                                                                                    </div>
+                                                                                ))}
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+
+                                                                    {threatAnalysis.ioc.suspicious_mints && threatAnalysis.ioc.suspicious_mints.length > 0 && (
+                                                                        <div className="bg-black/20 rounded-xl p-4">
+                                                                            <h4 className="text-white font-poppins font-semibold mb-3 flex items-center gap-2">
+                                                                                <TrendingUp className="w-4 h-4 text-yellow-400" />
+                                                                                Suspicious Mints
+                                                                            </h4>
+                                                                            <div className="space-y-2 max-h-40 overflow-y-auto">
+                                                                                {threatAnalysis.ioc.suspicious_mints.map((mint: string, index: number) => (
+                                                                                    <div key={index} className="bg-white/5 rounded p-2 font-mono text-xs text-white/80 break-all">
+                                                                                        {mint.substring(0, 8)}...{mint.substring(mint.length - 8)}
+                                                                                    </div>
+                                                                                ))}
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+
+                                                                    {threatAnalysis.ioc.related_programs && threatAnalysis.ioc.related_programs.length > 0 && (
+                                                                        <div className="bg-black/20 rounded-xl p-4">
+                                                                            <h4 className="text-white font-poppins font-semibold mb-3 flex items-center gap-2">
+                                                                                <Shield className="w-4 h-4 text-purple-400" />
+                                                                                Related Programs
+                                                                            </h4>
+                                                                            <div className="space-y-2 max-h-40 overflow-y-auto">
+                                                                                {threatAnalysis.ioc.related_programs.map((program: string, index: number) => (
+                                                                                    <div key={index} className="bg-white/5 rounded p-2 font-mono text-xs text-white/80 break-all">
+                                                                                        {program.substring(0, 8)}...{program.substring(program.length - 8)}
+                                                                                    </div>
+                                                                                ))}
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+
+                                                {/* Detailed Data Analysis */}
+                                                {analysisData.detailed_data && (
+                                                    <div className="space-y-6">
+                                                        {/* Wallet Information */}
+                                                        {analysisData.detailed_data.wallet_info && (
+                                                            <div className="bg-black/20 rounded-2xl p-6">
+                                                                <h3 className="text-white font-poppins text-xl font-semibold mb-4 flex items-center gap-2">
+                                                                    <Eye className="w-5 h-5 text-blue-400" />
+                                                                    Wallet Information
+                                                                </h3>
+                                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                                    <div className="bg-white/5 rounded-xl p-4">
+                                                                        <div className="flex items-center gap-2 mb-2">
+                                                                            <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                                                                            <span className="text-white/70 font-poppins text-sm">Address</span>
+                                                                        </div>
+                                                                        <div className="text-white font-mono text-sm">
+                                                                            {analysisData.detailed_data.wallet_info.address ? 
+                                                                                `${analysisData.detailed_data.wallet_info.address.substring(0, 8)}...${analysisData.detailed_data.wallet_info.address.substring(analysisData.detailed_data.wallet_info.address.length - 8)}` : 
+                                                                                'N/A'
+                                                                            }
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="bg-white/5 rounded-xl p-4">
+                                                                        <div className="flex items-center gap-2 mb-2">
+                                                                            <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                                                                            <span className="text-white/70 font-poppins text-sm">Address Name</span>
+                                                                        </div>
+                                                                        <div className="text-white font-poppins">
+                                                                            {analysisData.detailed_data.wallet_info.owner ? 
+                                                                                `${analysisData.detailed_data.wallet_info.owner.substring(0, 8)}...${analysisData.detailed_data.wallet_info.owner.substring(analysisData.detailed_data.wallet_info.owner.length - 8)}` : 
+                                                                                'Unknown'
+                                                                            }
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="bg-white/5 rounded-xl p-4">
+                                                                        <div className="flex items-center gap-2 mb-2">
+                                                                            <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
+                                                                            <span className="text-white/70 font-poppins text-sm">Risk Score</span>
+                                                                        </div>
+                                                                        <div className="text-white font-poppins text-xl font-bold">
+                                                                            {threatAnalysis?.riskScore || analysisData.analysis_result?.risk_score || 0}/100
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Transaction Summary */}
+                                                        {analysisData.detailed_data.transaction_summary && (
+                                                            <div className="bg-black/20 rounded-2xl p-6">
+                                                                <h3 className="text-white font-poppins text-xl font-semibold mb-4 flex items-center gap-2">
+                                                                    <Activity className="w-5 h-5 text-green-400" />
+                                                                    Transaction Summary
+                                                                </h3>
+                                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                                    <div className="bg-white/5 rounded-xl p-4 text-center">
+                                                                        <div className="text-2xl font-bold text-white mb-2">
+                                                                            {analysisData.detailed_data.transaction_summary.total_transactions || 0}
+                                                                        </div>
+                                                                        <div className="text-white/70 font-poppins text-sm">Total Transactions</div>
+                                                                    </div>
+                                                                    <div className="bg-white/5 rounded-xl p-4 text-center">
+                                                                        <div className="text-2xl font-bold text-white mb-2">
+                                                                            {analysisData.detailed_data.transaction_summary.recent_signatures || 0}
+                                                                        </div>
+                                                                        <div className="text-white/70 font-poppins text-sm">Recent Signatures</div>
+                                                                    </div>
+                                                                    <div className="bg-white/5 rounded-xl p-4 text-center">
+                                                                        <div className="text-2xl font-bold text-white mb-2">
+                                                                            {analysisData.detailed_data.transaction_summary.balance_changes || 0}
+                                                                        </div>
+                                                                        <div className="text-white/70 font-poppins text-sm">Balance Changes</div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Token & NFT Analysis */}
+                                                        {analysisData.detailed_data.token_analysis && (
+                                                            <div className="bg-black/20 rounded-2xl p-6">
+                                                                <h3 className="text-white font-poppins text-xl font-semibold mb-4 flex items-center gap-2">
+                                                                    <TrendingUp className="w-5 h-5 text-yellow-400" />
+                                                                    Token & NFT Analysis
+                                                                </h3>
+                                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                                                                    <div className="bg-white/5 rounded-xl p-4 text-center">
+                                                                        <div className="text-2xl font-bold text-white mb-2">
+                                                                            {analysisData.detailed_data.token_analysis.tokens_found || 0}
+                                                                        </div>
+                                                                        <div className="text-white/70 font-poppins text-sm">Tokens Found</div>
+                                                                    </div>
+                                                                    <div className="bg-white/5 rounded-xl p-4 text-center">
+                                                                        <div className="text-2xl font-bold text-white mb-2">
+                                                                            {analysisData.detailed_data.token_analysis.nfts_found || 0}
+                                                                        </div>
+                                                                        <div className="text-white/70 font-poppins text-sm">NFTs Found</div>
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* NFT Display */}
+                                                                {analysisData.detailed_data.token_analysis.nft_metadata && analysisData.detailed_data.token_analysis.nft_metadata.length > 0 && (
+                                                                    <div>
+                                                                        <h4 className="text-white font-poppins text-lg font-semibold mb-3 flex items-center gap-2">
+                                                                            <Eye className="w-5 h-5 text-purple-400" />
+                                                                            Recent NFTs
+                                                                        </h4>
+                                                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                                                            {analysisData.detailed_data.token_analysis.nft_metadata.slice(0, 8).map((nft: any, index: number) => (
+                                                                                <div key={index} className="bg-white/5 rounded-xl p-4 text-center border border-white/10 hover:border-sentry-accent/50 transition-colors">
+                                                                                    <div className="w-full h-24 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg mb-3 flex items-center justify-center">
+                                                                                        <Eye className="w-8 h-8 text-white/50" />
+                                                                                    </div>
+                                                                                    <div className="text-white font-poppins text-sm font-semibold mb-1 truncate">
+                                                                                        {nft.name || 'Unknown NFT'}
+                                                                                    </div>
+                                                                                    <div className="text-white/60 font-poppins text-xs truncate">
+                                                                                        {nft.symbol || ''}
+                                                                                    </div>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+
+                                                {/* AI Analysis Text (fallback) */}
+                                                {!threatAnalysis && (analysisData.analysis_result?.ai_analysis || 
+                                                  analysisData.ai_analysis ||
+                                                  (typeof analysisData.analysis_result === 'string' && analysisData.analysis_result.length > 0)) && (
+                                                    <div className="bg-black/20 rounded-2xl p-6">
+                                                        <h3 className="text-white font-poppins text-xl font-semibold mb-4 flex items-center gap-2">
+                                                            <MessageSquare className="w-5 h-5 text-sentry-accent" />
+                                                            AI Security Analysis
+                                                        </h3>
+                                                        <div className="text-white/80 font-poppins leading-relaxed whitespace-pre-wrap">
+                                                            {analysisData.analysis_result?.ai_analysis || 
+                                                             analysisData.ai_analysis ||
+                                                             (typeof analysisData.analysis_result === 'string' ? analysisData.analysis_result : 'No AI analysis available')}
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Debug Data (development only) */}
+                                                {process.env.NODE_ENV === 'development' && (
+                                                    <details className="bg-black/20 rounded-xl p-4">
+                                                        <summary className="text-white font-poppins cursor-pointer flex justify-between mb-2">
+                                                            <div className="flex items-center gap-2">
+                                                                <Eye /> View Raw Analysis Data
+                                                            </div>
+                                                            <div className="flex items-center">
+                                                                <svg 
+                                                                    className="w-4 h-4 transform transition-transform duration-200" 
+                                                                    fill="none" 
+                                                                    stroke="currentColor" 
+                                                                    viewBox="0 0 24 24"
+                                                                >
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                                                </svg>
+                                                            </div>
+                                                        </summary>
+                                                        <pre className="text-white/70 font-mono text-xs overflow-auto max-h-60 mt-2 bg-black/30 rounded p-4">
+                                                            {JSON.stringify(analysisData, null, 2)}
+                                                        </pre>
+                                                    </details>
+                                                )}
+                                            </>
+                                        );
+                                    })()}
                                 </div>
                             )}
-                        </div>
 
-                        {/* Quick Actions */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
-                                <div className="w-12 h-12 bg-sentry-sage rounded-xl flex items-center justify-center mb-4">
-                                    <Shield className="w-6 h-6 text-black" />
+                            {/* Quick Actions */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+                                <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
+                                    <div className="w-12 h-12 bg-sentry-sage rounded-xl flex items-center justify-center mb-4">
+                                        <Shield className="w-6 h-6 text-black" />
+                                    </div>
+                                    <h3 className="text-white font-poppins text-lg font-semibold mb-2">Real-time Protection</h3>
+                                    <p className="text-white/70 font-poppins text-sm">
+                                        Continuous monitoring of wallet activity for suspicious behavior patterns
+                                    </p>
                                 </div>
-                                <h3 className="text-white font-poppins text-lg font-semibold mb-2">Real-time Protection</h3>
-                                <p className="text-white/70 font-poppins text-sm">
-                                    Continuous monitoring of wallet activity for suspicious behavior patterns
-                                </p>
-                            </div>
 
-                            <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
-                                <div className="w-12 h-12 bg-sentry-accent rounded-xl flex items-center justify-center mb-4">
-                                    <MessageSquare className="w-6 h-6 text-white" />
+                                <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
+                                    <div className="w-12 h-12 bg-sentry-accent rounded-xl flex items-center justify-center mb-4">
+                                        <MessageSquare className="w-6 h-6 text-white" />
+                                    </div>
+                                    <h3 className="text-white font-poppins text-lg font-semibold mb-2">AI Address Tracer</h3>
+                                    <p className="text-white/70 font-poppins text-sm">
+                                        Chat with AI to trace and analyze any Solana wallet address
+                                    </p>
                                 </div>
-                                <h3 className="text-white font-poppins text-lg font-semibold mb-2">AI Address Tracer</h3>
-                                <p className="text-white/70 font-poppins text-sm">
-                                    Chat with AI to trace and analyze any Solana wallet address
-                                </p>
-                            </div>
 
-                            <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
-                                <div className="w-12 h-12 bg-sentry-blue-gray rounded-xl flex items-center justify-center mb-4">
-                                    <Network className="w-6 h-6 text-white" />
+                                <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
+                                    <div className="w-12 h-12 bg-sentry-blue-gray rounded-xl flex items-center justify-center mb-4">
+                                        <Network className="w-6 h-6 text-white" />
+                                    </div>
+                                    <h3 className="text-white font-poppins text-lg font-semibold mb-2">Network Analysis</h3>
+                                    <p className="text-white/70 font-poppins text-sm">
+                                        Visualize transaction networks and fund flows with interactive graphs
+                                    </p>
                                 </div>
-                                <h3 className="text-white font-poppins text-lg font-semibold mb-2">Network Analysis</h3>
-                                <p className="text-white/70 font-poppins text-sm">
-                                    Visualize transaction networks and fund flows with interactive graphs
-                                </p>
                             </div>
                         </div>
                     </div>
