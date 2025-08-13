@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Search, AlertTriangle, CheckCircle } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { Send, Bot, User, Search, AlertTriangle, CheckCircle, Activity, Shield, TrendingUp, Eye, Network, BarChart3, MessageSquare, Clock } from 'lucide-react';
 
 interface ChatMessage {
   id: string;
-  type: 'user' | 'bot';
+  type: 'user' | 'bot' | 'system';
   content: string;
   timestamp: Date;
   analysis?: {
@@ -11,6 +13,8 @@ interface ChatMessage {
     risk_score?: number;
     recent_transactions?: number;
   };
+  isStreaming?: boolean;
+  analysisData?: any;
 }
 
 interface ChatBoxProps {
@@ -29,6 +33,9 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onAddressAnalyze, isAnalyzing 
   ]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
+  const [analysisLogs, setAnalysisLogs] = useState<string[]>([]);
+  const [analysisProgress, setAnalysisProgress] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -37,66 +44,454 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onAddressAnalyze, isAnalyzing 
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, analysisLogs]);
 
-  const extractSolanaAddress = (text: string): string | null => {
-    // Solana address pattern (base58, 32-44 characters)
-    const addressPattern = /[1-9A-HJ-NP-Za-km-z]{32,44}/g;
-    const matches = text.match(addressPattern);
-    return matches ? matches[0] : null;
-  };
-
-  const analyzeWithBackend = async (message: string, address?: string) => {
+  // Function to handle streaming chat with Mistral
+  const streamChatWithMistral = async (message: string, messageId: string) => {
     try {
-      // Connect to Python backend
       const backendUrl = import.meta.env.DEV ? 'https://sentrysol-beta-production.up.railway.app' : window.location.origin;
 
-      // First check if backend is available
-      try {
-        const healthCheck = await fetch(`${backendUrl}/health`, {
-          method: 'GET',
-          signal: AbortSignal.timeout(5000) // 5 second timeout
-        });
-
-        if (!healthCheck.ok) {
-          throw new Error(`Backend not available (${healthCheck.status})`);
-        }
-      } catch (healthError) {
-        console.error('Backend health check failed:', healthError);
-        throw new Error('Backend server is not responding.');
-      }
-
-      const response = await fetch(`${backendUrl}/chat`, {
+      const response = await fetch(`${backendUrl}/chat-sentrysol-stream`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          message,
-          address
+          message: message,
+          system_prompt: `You are SentrySol AI, a security assistant for Solana blockchain analysis. 
+
+IMPORTANT INSTRUCTIONS:
+1. If the user message contains a Solana or Ethereum address (32-44 characters, base58 for Solana, 42 characters starting with 0x for Ethereum), respond with JSON format: {"type": "address_detected", "address": "the_address", "response": "your_message_about_starting_analysis"}
+
+2. For regular conversations about blockchain security, wallets, or general questions, respond with normal string
+
+3. Always be helpful, professional, and focus on blockchain security topics.
+
+4. Keep responses concise but informative.`,
+          temperature: 0.7,
+          max_tokens: 2000
         }),
-        signal: AbortSignal.timeout(10000) // 10 second timeout
+        signal: AbortSignal.timeout(30000)
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Analysis failed: ${response.status} - ${errorText}`);
+        throw new Error(`Chat API failed: ${response.status}`);
       }
 
-      return await response.json();
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error('No response stream available');
+      }
+
+      let buffer = '';
+      let streamingContent = '';
+      let detectedAddress: string | null = null;
+      let isStreamComplete = false;
+
+      // Update message to show streaming
+      setMessages(prev => prev.map(msg =>
+        msg.id === messageId
+          ? { ...msg, content: '🤖 Thinking...', isStreaming: true }
+          : msg
+      ));
+
+      while (!isStreamComplete) {
+        const { done, value } = await reader.read();
+
+        if (done) break;
+
+        const chunk = new TextDecoder().decode(value);
+        buffer += chunk;
+
+        // Process complete lines
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6).trim();
+
+            if (data === '[DONE]') {
+              isStreamComplete = true;
+              break;
+            }
+
+            try {
+              const jsonData = JSON.parse(data);
+
+              // Handle status messages
+              if (jsonData.status) {
+                setMessages(prev => prev.map(msg =>
+                  msg.id === messageId
+                    ? { ...msg, content: `🤖 ${jsonData.message || jsonData.status}`, isStreaming: true }
+                    : msg
+                ));
+                continue;
+              }
+
+              // Handle content streaming
+              if (jsonData.type === 'content' && jsonData.content !== undefined) {
+                streamingContent += jsonData.content;
+
+                // Update streaming message with accumulated content
+                setMessages(prev => prev.map(msg =>
+                  msg.id === messageId
+                    ? { ...msg, content: streamingContent || '🤖 Processing...', isStreaming: true }
+                    : msg
+                ));
+              }
+
+              // Handle completion
+              if (jsonData.type === 'done') {
+                isStreamComplete = true;
+
+                // Try to parse the accumulated content for address detection
+                try {
+                  // Check if the entire response is a JSON object
+                  const parsedResponse = JSON.parse(streamingContent);
+                  if (parsedResponse.type === 'address_detected' && parsedResponse.address) {
+                    detectedAddress = parsedResponse.address;
+                    streamingContent = parsedResponse.response || streamingContent;
+                  } else if (parsedResponse.type === 'chat' && parsedResponse.response) {
+                    streamingContent = parsedResponse.response;
+                  }
+                } catch (e) {
+                  // Content is not JSON, use as-is
+                  // Check for address pattern in plain text
+                  const addressPattern = /\b[1-9A-HJ-NP-Za-km-z]{32,44}\b|0x[a-fA-F0-9]{40}\b/g;
+                  const foundAddresses = streamingContent.match(addressPattern);
+                  if (foundAddresses && foundAddresses.length > 0) {
+                    detectedAddress = foundAddresses[0];
+                  }
+                }
+                break;
+              }
+            } catch (e) {
+              console.warn('Failed to parse streaming data:', data, e);
+              continue;
+            }
+          }
+        }
+      }
+
+      // Finalize the message
+      const finalContent = streamingContent || 'I apologize, but I encountered an issue processing your request.';
+      setMessages(prev => prev.map(msg =>
+        msg.id === messageId
+          ? {
+            ...msg,
+            content: finalContent,
+            isStreaming: false
+          }
+          : msg
+      ));
+
+      return {
+        content: finalContent,
+        detectedAddress: detectedAddress
+      };
+
     } catch (error) {
-      console.error('Backend analysis error:', error);
+      console.error('Chat streaming error:', error);
 
-      if (error.name === 'TimeoutError') {
-        throw new Error('Request timed out. Backend may be slow or unresponsive.');
-      }
-
-      if (error.message.includes('Failed to fetch')) {
-        throw new Error('Cannot connect to backend. Make sure the Python server is running on port 8000.');
-      }
+      // Update message with error
+      setMessages(prev => prev.map(msg =>
+        msg.id === messageId
+          ? {
+            ...msg,
+            content: `❌ **Connection Error**\n\nUnable to connect to SentrySol AI. Please check your connection and try again.`,
+            isStreaming: false
+          }
+          : msg
+      ));
 
       throw error;
     }
+  };
+
+  // Function to start streaming analysis
+  const startStreamingAnalysis = async (address: string, messageId: string) => {
+    const backendUrl = import.meta.env.DEV ? 'https://sentrysol-beta-production.up.railway.app' : window.location.origin;
+    const analyzeUrl = `${backendUrl}/analyze/${address}`;
+
+    setStreamingMessageId(messageId);
+    setAnalysisLogs([]);
+    setAnalysisProgress(0);
+
+    const startTime = Date.now();
+    let eventSource: EventSource;
+    let lastActivityTime = Date.now();
+    let keepAliveInterval: NodeJS.Timeout;
+    let connectionCheckInterval: NodeJS.Timeout;
+    let isManuallyStoped = false;
+
+    // Add initial streaming status
+    const streamingMessage = `🔍 **Starting Deep Analysis for Address:** \`${address}\`\n\n⏳ Connecting to SentrySol-Core...`;
+
+    setMessages(prev => prev.map(msg =>
+      msg.id === messageId
+        ? { ...msg, content: streamingMessage, isStreaming: true }
+        : msg
+    ));
+
+    const connectToStream = () => {
+      if (eventSource && eventSource.readyState !== 2) {
+        eventSource.close();
+      }
+
+      eventSource = new EventSource(analyzeUrl);
+      lastActivityTime = Date.now();
+
+      keepAliveInterval = setInterval(() => {
+        if (eventSource.readyState === 1) {
+          const timeSinceActivity = Date.now() - lastActivityTime;
+          const totalAnalysisTime = Date.now() - startTime;
+
+          if (timeSinceActivity > 120000) {
+            setAnalysisLogs(prev => [...prev, 'Connection timeout - no activity for 2 minutes']);
+            cleanup();
+            return;
+          }
+
+          if (totalAnalysisTime > 120000 && Math.floor(totalAnalysisTime / 120000) !== Math.floor((totalAnalysisTime - 30000) / 120000)) {
+            const minutes = Math.floor(totalAnalysisTime / 60000);
+            const seconds = Math.floor((totalAnalysisTime % 60000) / 1000);
+            setAnalysisLogs(prev => [...prev, `Analysis running for ${minutes}m ${seconds}s...`]);
+          }
+        }
+      }, 30000);
+
+      connectionCheckInterval = setInterval(() => {
+        if (eventSource.readyState === 2 && !isManuallyStoped) {
+          const timeSinceStart = Date.now() - startTime;
+
+          if (timeSinceStart > 8 * 60 * 1000) {
+            setAnalysisLogs(prev => [...prev, 'Maximum analysis time reached']);
+            cleanup();
+            return;
+          }
+
+          setAnalysisLogs(prev => [...prev, '🔄 Connection lost, attempting reconnect...']);
+          clearInterval(keepAliveInterval);
+          clearInterval(connectionCheckInterval);
+
+          setTimeout(() => {
+            if (!isManuallyStoped) {
+              connectToStream();
+            }
+          }, 5000);
+        }
+      }, 5000);
+
+      eventSource.onopen = function (event) {
+        setAnalysisLogs(prev => [...prev, '✅ Connected to analysis stream']);
+        lastActivityTime = Date.now();
+      };
+
+      eventSource.onmessage = function (event) {
+        lastActivityTime = Date.now();
+
+        if (event.data === '[DONE]') {
+          const totalTime = Math.floor((Date.now() - startTime) / 1000);
+          setAnalysisLogs(prev => [...prev, `✅ Analysis completed in ${totalTime}s!`]);
+
+          // Update the message to show completion
+          setMessages(prev => prev.map(msg =>
+            msg.id === messageId
+              ? {
+                ...msg,
+                isStreaming: false,
+                content: msg.content + '\n\n✅ **Deep Analysis Complete!**'
+              }
+              : msg
+          ));
+
+          cleanup();
+          setStreamingMessageId(null);
+          return;
+        }
+
+        if (event.data === 'keepalive' || event.data === 'ping' || event.data.includes('heartbeat')) {
+          return;
+        }
+
+        if (!event.data || event.data.trim() === '') {
+          return;
+        }
+
+        try {
+          const data = JSON.parse(event.data);
+
+          if (data.progress !== undefined) {
+            setAnalysisProgress(data.progress);
+          }
+
+          if (data.status) {
+            const stepInfo = data.step ? `Step ${data.step}: ` : '';
+            const progressInfo = data.progress !== undefined ? ` (${data.progress}%)` : '';
+            const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+            const timeInfo = ` [${elapsedSeconds}s]`;
+
+            const logEntry = `${stepInfo}${data.status}${progressInfo}${timeInfo}`;
+            setAnalysisLogs(prev => [...prev, logEntry]);
+
+            // Update streaming message with latest log
+            setMessages(prev => prev.map(msg =>
+              msg.id === messageId
+                ? {
+                  ...msg,
+                  content: `🔍 **Deep Analysis:** \`${address}\`\n\n**Progress:** ${data.progress || 0}%\n\n**Latest:** ${data.status}\n\n⏱️ **Elapsed Time:** ${elapsedSeconds}s`
+                }
+                : msg
+            ));
+          }
+
+          if (data.data || data.analysis_result || data.detailed_data || data.transaction_graph || data.threat_analysis) {
+            const finalData = data.data || data;
+
+            // Update message with analysis results
+            const analysisResult = parseAnalysisResult(finalData);
+            const formattedResult = formatAnalysisForChat(analysisResult, address);
+
+            setMessages(prev => prev.map(msg =>
+              msg.id === messageId
+                ? {
+                  ...msg,
+                  content: formattedResult,
+                  analysisData: finalData,
+                  isStreaming: false
+                }
+                : msg
+            ));
+
+            setAnalysisLogs(prev => [...prev, 'Analysis results received and processed']);
+          }
+
+          if (data.error && data.critical === true) {
+            setAnalysisLogs(prev => [...prev, `❌ Critical error: ${data.error}`]);
+            cleanup();
+          }
+
+        } catch (parseError) {
+          console.error('Parse error:', parseError);
+          setAnalysisLogs(prev => [...prev, `⚠️ Parse error, continuing...`]);
+        }
+      };
+
+      eventSource.onerror = function (event) {
+        console.error('EventSource error:', event);
+        setAnalysisLogs(prev => [...prev, '🔗 Connection error detected']);
+      };
+    };
+
+    const cleanup = () => {
+      isManuallyStoped = true;
+      if (keepAliveInterval) clearInterval(keepAliveInterval);
+      if (connectionCheckInterval) clearInterval(connectionCheckInterval);
+      if (eventSource && eventSource.readyState !== 2) {
+        eventSource.close();
+      }
+      setStreamingMessageId(null);
+    };
+
+    connectToStream();
+  };
+
+  const parseAnalysisResult = (rawResult: any) => {
+    try {
+      if (typeof rawResult === 'string') {
+        let cleanResult = rawResult;
+        if (rawResult.startsWith('```json\n')) {
+          cleanResult = rawResult.replace(/^```json\n/, '').replace(/\n```$/, '');
+        }
+        return JSON.parse(cleanResult);
+      }
+      return rawResult;
+    } catch (e) {
+      console.error('Failed to parse analysis result:', e);
+      return rawResult;
+    }
+  };
+
+  const formatAnalysisForChat = (analysisData: any, address: string) => {
+    let formattedResult = `🔍 **Deep Analysis Complete for:** \`${address}\`\n\n`;
+
+    try {
+      // Extract threat analysis
+      let threatAnalysis = null;
+      if (analysisData.analysis_result) {
+        const parsedAnalysis = parseAnalysisResult(analysisData.analysis_result);
+        if (parsedAnalysis?.threat_analysis) {
+          threatAnalysis = parsedAnalysis.threat_analysis;
+        }
+      }
+
+      if (threatAnalysis) {
+        const riskScore = threatAnalysis.risk_score || 0;
+        const riskLevel = threatAnalysis.overall_risk_level || 'UNKNOWN';
+
+        formattedResult += `🛡️ **Risk Assessment**\n`;
+        formattedResult += `• **Risk Level:** ${riskLevel}\n`;
+        formattedResult += `• **Risk Score:** ${riskScore}/100\n\n`;
+
+        // Potential threats
+        if (threatAnalysis.potential_threats && threatAnalysis.potential_threats.length > 0) {
+          formattedResult += `⚠️ **Identified Threats:**\n`;
+          threatAnalysis.potential_threats.forEach((threat: any, index: number) => {
+            formattedResult += `${index + 1}. **${threat.threat_type}** (${threat.confidence})\n`;
+            formattedResult += `   ${threat.reason}\n\n`;
+          });
+        }
+
+        // IOC Summary
+        if (threatAnalysis.ioc) {
+          formattedResult += `🔍 **Indicators of Compromise:**\n`;
+          if (threatAnalysis.ioc.addresses?.length > 0) {
+            formattedResult += `• **Suspicious Addresses:** ${threatAnalysis.ioc.addresses.length}\n`;
+          }
+          if (threatAnalysis.ioc.transaction_signatures?.length > 0) {
+            formattedResult += `• **Flagged Transactions:** ${threatAnalysis.ioc.transaction_signatures.length}\n`;
+          }
+          if (threatAnalysis.ioc.suspicious_mints?.length > 0) {
+            formattedResult += `• **Suspicious Tokens:** ${threatAnalysis.ioc.suspicious_mints.length}\n`;
+          }
+          formattedResult += '\n';
+        }
+      }
+
+      // Wallet info
+      if (analysisData.detailed_data?.wallet_info) {
+        formattedResult += `💼 **Wallet Information**\n`;
+        formattedResult += `• **Address:** \`${analysisData.detailed_data.wallet_info.address?.substring(0, 8)}...${analysisData.detailed_data.wallet_info.address?.substring(-8)}\`\n\n`;
+      }
+
+      // Transaction summary
+      if (analysisData.detailed_data?.transaction_summary) {
+        const txSummary = analysisData.detailed_data.transaction_summary;
+        formattedResult += `📊 **Transaction Summary**\n`;
+        formattedResult += `• **Total Transactions:** ${txSummary.total_transactions || 0}\n`;
+        formattedResult += `• **Recent Signatures:** ${txSummary.recent_signatures || 0}\n`;
+        formattedResult += `• **Balance Changes:** ${txSummary.balance_changes || 0}\n\n`;
+      }
+
+      // Token analysis
+      if (analysisData.detailed_data?.token_analysis) {
+        const tokenAnalysis = analysisData.detailed_data.token_analysis;
+        formattedResult += `🪙 **Token & NFT Analysis**\n`;
+        formattedResult += `• **Tokens Found:** ${tokenAnalysis.tokens_found || 0}\n`;
+        formattedResult += `• **NFTs Found:** ${tokenAnalysis.nfts_found || 0}\n\n`;
+      }
+
+      formattedResult += `✅ **Deep analysis completed successfully!**\n`;
+      formattedResult += `📈 Click "View Full Analysis" to see detailed network graphs and visualizations.`;
+
+    } catch (error) {
+      console.error('Error formatting analysis:', error);
+      formattedResult += `❌ Analysis completed but formatting error occurred.\n`;
+      formattedResult += `Raw data available in full analysis view.`;
+    }
+
+    return formattedResult;
   };
 
   const handleSendMessage = async () => {
@@ -110,64 +505,84 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onAddressAnalyze, isAnalyzing 
     };
 
     setMessages(prev => [...prev, userMessage]);
+    const currentInput = inputMessage;
     setInputMessage('');
     setIsLoading(true);
 
-    // Extract address if present
-    const extractedAddress = extractSolanaAddress(inputMessage);
+    // Create bot message for streaming
+    const botMessageId = (Date.now() + 1).toString();
+    const botMessage: ChatMessage = {
+      id: botMessageId,
+      type: 'bot',
+      content: '🤖 Processing...',
+      timestamp: new Date(),
+      isStreaming: true
+    };
+
+    setMessages(prev => [...prev, botMessage]);
 
     try {
-      // Get AI response
-      const analysisResult = await analyzeWithBackend(inputMessage, extractedAddress || undefined);
+      // Stream chat with Mistral
+      const mistralResult = await streamChatWithMistral(currentInput, botMessageId);
 
-      let botResponse: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        type: 'bot',
-        content: analysisResult.response,
-        timestamp: new Date(),
-        analysis: analysisResult.quick_analysis
-      };
+      setIsLoading(false);
 
-      setMessages(prev => [...prev, botResponse]);
+      // If address detected, start deep analysis
+      if (mistralResult.detectedAddress) {
+        // Show analysis announcement
+        const analysisAnnouncementId = (Date.now() + 2).toString();
+        const analysisAnnouncement: ChatMessage = {
+          id: analysisAnnouncementId,
+          type: 'bot',
+          content: `🚀 **Initiating Deep Security Analysis**\n\nI've detected the address: \`${mistralResult.detectedAddress}\`\n\nStarting comprehensive analysis including:\n• Behavioral pattern analysis\n• Risk assessment\n• Network graph generation\n• Threat intelligence scan`,
+          timestamp: new Date()
+        };
 
-      // If there's an address, offer to analyze it
-      if (extractedAddress && !isAnalyzing) {
+        setMessages(prev => [...prev, analysisAnnouncement]);
+
+        // Create streaming analysis message
+        const streamingAnalysisId = (Date.now() + 3).toString();
+        const streamingAnalysisMessage: ChatMessage = {
+          id: streamingAnalysisId,
+          type: 'bot',
+          content: '🔍 Preparing analysis...',
+          timestamp: new Date(),
+          isStreaming: true
+        };
+
+        setMessages(prev => [...prev, streamingAnalysisMessage]);
+
+        // Start streaming analysis after short delay
         setTimeout(() => {
-          const analysisPrompt: ChatMessage = {
-            id: (Date.now() + 2).toString(),
-            type: 'bot',
-            content: `🔍 Ready to analyze ${extractedAddress}?\n\nClick "Analyze Address" to start a comprehensive security scan including:\n• Transaction pattern analysis\n• Risk assessment\n• Fund flow visualization\n• AI-powered threat detection`,
-            timestamp: new Date()
-          };
-          setMessages(prev => [...prev, analysisPrompt]);
-        }, 1000);
+          startStreamingAnalysis(mistralResult.detectedAddress!, streamingAnalysisId);
+        }, 1500);
       }
 
     } catch (error) {
       console.error('Chat error:', error);
 
-      let errorContent = 'Sorry, I encountered an error while processing your request.';
+      let errorContent = '❌ **Connection Error**\n\n';
 
-      if (error.message.includes('Backend server is not running')) {
-        errorContent = `🚨 Backend Connection Error\n\nThe Python backend server is not running. To use AI analysis features:\n\n1. Open a terminal\n2. Navigate to the backend directory: cd backend\n3. Install dependencies: pip install -r requirements.txt\n4. Start server: uvicorn main:app --port 8000 --reload\n\nOnce the backend is running, try your request again!`;
-      } else if (error.message.includes('timed out')) {
-        errorContent = `⏱️ Request Timeout\n\nThe backend is taking too long to respond. This might be because:\n• The server is starting up\n• Heavy processing load\n• Network issues\n\nTry again in a few moments.`;
-      } else if (extractedAddress) {
-        // Fallback response when backend is down but address is detected
-        errorContent = `I found a Solana address: ${extractedAddress}\n\n❌ Backend Analysis Unavailable\nThe AI analysis service is currently offline. However, you can still:\n• Copy the address for manual review\n• Try again once the backend is running\n• Use other blockchain explorers for basic info`;
+      if (error.message.includes('Failed to fetch') || error.message.includes('timeout')) {
+        errorContent += 'Unable to connect to SentrySol AI services. Please check:\n\n';
+        errorContent += '• Backend server is running\n';
+        errorContent += '• Internet connection is stable\n';
+        errorContent += '• Try again in a few moments\n\n';
+        errorContent += '**Note:** For address analysis, you can also paste addresses directly and I\'ll do my best to help with basic information.';
+      } else {
+        errorContent += `Service temporarily unavailable: ${error.message}\n\n`;
+        errorContent += 'Please try again later or contact support if the problem persists.';
       }
 
-      const errorMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        type: 'bot',
-        content: errorContent,
-        timestamp: new Date(),
-        analysis: extractedAddress ? { address: extractedAddress } : undefined
-      };
-      setMessages(prev => [...prev, errorMessage]);
-    }
+      // Update the streaming message with error
+      setMessages(prev => prev.map(msg =>
+        msg.id === botMessageId
+          ? { ...msg, content: errorContent, isStreaming: false }
+          : msg
+      ));
 
-    setIsLoading(false);
+      setIsLoading(false);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -198,7 +613,7 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onAddressAnalyze, isAnalyzing 
   };
 
   return (
-    <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-6 flex flex-col h-96">
+    <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-2xl p-6 flex flex-col h-[600px]">
       {/* Header */}
       <div className="flex items-center gap-3 mb-4 pb-4 border-b border-white/10">
         <div className="w-8 h-8 bg-sentry-accent rounded-full flex items-center justify-center">
@@ -217,13 +632,12 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onAddressAnalyze, isAnalyzing 
             key={message.id}
             className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
           >
-            <div className={`max-w-[80%] ${message.type === 'user' ? 'order-2' : 'order-1'}`}>
+            <div className={`max-w-[85%] ${message.type === 'user' ? 'order-2' : 'order-1'}`}>
               <div
-                className={`p-3 rounded-2xl ${
-                  message.type === 'user'
+                className={`p-3 rounded-2xl ${message.type === 'user'
                     ? 'bg-sentry-sage text-black ml-2'
                     : 'bg-black/20 text-white mr-2'
-                }`}
+                  }`}
               >
                 <div className="flex items-start gap-2">
                   {message.type === 'bot' && (
@@ -233,67 +647,164 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onAddressAnalyze, isAnalyzing 
                     <User className="w-4 h-4 text-black mt-0.5 flex-shrink-0" />
                   )}
                   <div className="flex-1">
-                    <p className="font-poppins text-sm leading-relaxed whitespace-pre-wrap">
-                      {message.content}
-                    </p>
-                    
-                    {/* Quick Analysis Display */}
-                    {message.analysis && message.analysis.address && (
-                      <div className="mt-3 p-3 bg-black/20 rounded-xl border border-white/10">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-white/70 font-poppins text-xs">Quick Analysis</span>
-                          <button
-                            onClick={() => handleQuickAnalyze(message.analysis!.address!)}
-                            disabled={isAnalyzing}
-                            className="bg-sentry-accent text-white px-3 py-1 rounded-full text-xs font-poppins hover:bg-sentry-accent/80 transition-colors disabled:opacity-50"
-                          >
-                            {isAnalyzing ? 'Analyzing...' : 'Analyze Address'}
-                          </button>
+                    <div className="font-poppins text-sm leading-relaxed whitespace-pre-wrap">
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          // Custom styling untuk code blocks
+                          code: ({ node, inline, className, children, ...props }: {
+                            node?: any;
+                            inline?: boolean;
+                            className?: string;
+                            children?: React.ReactNode;
+                          }) => {
+                            return inline ? (
+                              <code className="bg-black/30 text-sentry-sage px-1.5 py-0.5 rounded text-xs font-mono">
+                                {children}
+                              </code>
+                            ) : (
+                              <code className="block bg-black/30 p-2 rounded-lg text-white/90 font-mono text-xs overflow-x-auto my-1 whitespace-pre-wrap break-words max-w-full">
+                                {children}
+                              </code>
+                            );
+                          },
+                          // Custom
+                          //  styling untuk headings - Reduced spacing
+                          h1: ({ children }) => (
+                            <h1 className="text-lg font-bold text-white mb-1 mt-1">{children}</h1>
+                          ),
+                          h2: ({ children }) => (
+                            <h2 className="text-base font-semibold text-white mb-1 mt-1">{children}</h2>
+                          ),
+                          h3: ({ children }) => (
+                            <h3 className="text-sm font-medium text-white/90 mb-0.5 mt-0.5">{children}</h3>
+                          ),
+                          // Custom styling untuk paragraphs - Reduced spacing
+                          p: ({ children }) => (
+                            <p className="my-0 leading-snug">{children}</p>
+                          ),
+                          // Custom styling untuk lists - Reduced spacing
+                          ul: ({ children }) => (
+                            <ul className="list-disc list-inside my-0 pl-3 text-white/90">{children}</ul>
+                          ),
+                          ol: ({ children }) => (
+                            <ol className="list-decimal list-inside my-0 pl-3 text-white/90">{children}</ol>
+                          ),
+                          li: ({ children }) => (
+                            <li className="text-white/90 my-0 leading-snug">{children}</li>
+                          ),
+                          // Custom styling untuk links
+                          a: ({ href, children }) => (
+                            <a
+                              href={href}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-sentry-accent hover:text-sentry-sage underline"
+                            >
+                              {children}
+                            </a>
+                          ),
+                          // Custom styling untuk emphasis
+                          strong: ({ children }) => (
+                            <strong className="text-white font-semibold">{children}</strong>
+                          ),
+                          em: ({ children }) => (
+                            <em className="text-white/80 italic">{children}</em>
+                          ),
+                          // Custom styling untuk blockquotes - Reduced spacing
+                          blockquote: ({ children }) => (
+                            <blockquote className="border-l-4 border-sentry-accent pl-3 py-1 my-1 bg-black/20 rounded-r-lg">
+                              {children}
+                            </blockquote>
+                          ),
+                          // Custom styling untuk line breaks
+                          br: () => <br className="leading-none" />,
+                        }}
+                      >
+                        {message.content}
+                      </ReactMarkdown>
+                    </div>
+
+                    {/* Streaming indicator for regular chat */}
+                    {message.isStreaming && !message.analysisData && streamingMessageId !== message.id && (
+                      <div className="mt-2 flex items-center gap-2">
+                        <div className="flex space-x-1">
+                          <div className="w-2 h-2 bg-sentry-accent rounded-full animate-bounce"></div>
+                          <div className="w-2 h-2 bg-sentry-accent rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                          <div className="w-2 h-2 bg-sentry-accent rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                         </div>
-                        
-                        {message.analysis.risk_score !== undefined && (
-                          <div className="grid grid-cols-2 gap-2 text-xs">
-                            <div>
-                              <span className="text-white/60">Risk Level:</span>
-                              <span className={`ml-1 font-semibold ${getRiskColor(message.analysis.risk_score)}`}>
-                                {getRiskLevel(message.analysis.risk_score)}
-                              </span>
-                            </div>
-                            <div>
-                              <span className="text-white/60">Recent TXs:</span>
-                              <span className="ml-1 text-white font-semibold">
-                                {message.analysis.recent_transactions || 0}
-                              </span>
-                            </div>
+                        <span className="text-white/60 font-poppins text-xs">AI is thinking...</span>
+                      </div>
+                    )}
+
+                    {/* Streaming Progress for analysis */}
+                    {message.isStreaming && streamingMessageId === message.id && (
+                      <div className="mt-3 p-3 bg-black/20 rounded-xl border border-white/10">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Activity className="w-4 h-4 text-sentry-accent animate-spin" />
+                          <span className="text-white/70 font-poppins text-xs">Live Deep Analysis</span>
+                        </div>
+
+                        <div className="w-full bg-black/20 rounded-full h-2 mb-2">
+                          <div
+                            className="bg-gradient-to-r from-sentry-sage to-sentry-accent h-2 rounded-full transition-all duration-500"
+                            style={{ width: `${analysisProgress}%` }}
+                          ></div>
+                        </div>
+
+                        {analysisLogs.length > 0 && (
+                          <div className="max-h-20 overflow-y-auto">
+                            {analysisLogs.slice(-3).map((log, index) => (
+                              <div key={index} className="text-white/60 font-mono text-xs mb-1">
+                                {log}
+                              </div>
+                            ))}
                           </div>
                         )}
                       </div>
                     )}
+
+                    {/* Analysis Results Actions */}
+                    {message.analysisData && !message.isStreaming && (
+                      <div className="mt-3 p-3 bg-black/20 rounded-xl border border-white/10">
+                        <div className="flex items-center justify-between">
+                          <span className="text-white/70 font-poppins text-xs">Full Analysis Available</span>
+                          <button
+                            onClick={() => {
+                              const address = message.analysisData.detailed_data?.wallet_info?.address ||
+                                message.analysisData.metadata?.target_address;
+                              if (address) {
+                                handleQuickAnalyze(address);
+                              }
+                            }}
+                            className="bg-sentry-accent text-white px-3 py-1 rounded-full text-xs font-poppins hover:bg-sentry-accent/80 transition-colors"
+                          >
+                            View Full Analysis
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
-                <div className="text-xs text-white/50 mt-1 text-right">
+                <div className="text-xs text-grey mt-1 text-right">
                   {formatTimestamp(message.timestamp)}
                 </div>
               </div>
             </div>
           </div>
         ))}
-        
+
         {isLoading && (
           <div className="flex justify-start">
             <div className="bg-black/20 text-white p-3 rounded-2xl mr-2">
               <div className="flex items-center gap-2">
                 <Bot className="w-4 h-4 text-sentry-accent" />
-                <div className="flex space-x-1">
-                  <div className="w-2 h-2 bg-sentry-accent rounded-full animate-bounce"></div>
-                  <div className="w-2 h-2 bg-sentry-accent rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                  <div className="w-2 h-2 bg-sentry-accent rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                </div>
+                <span className="text-white/70 font-poppins text-sm">Starting conversation...</span>
               </div>
             </div>
           </div>
         )}
-        
+
         <div ref={messagesEndRef} />
       </div>
 
@@ -304,16 +815,16 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onAddressAnalyze, isAnalyzing 
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder="Ask about an address or paste a Solana wallet address..."
-            className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/60 font-poppins text-sm resize-none focus:outline-none focus:border-sentry-accent transition-colors"
+            placeholder="Ask about blockchain security or paste a Solana/Ethereum address for analysis..."
+            className="w-full h-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/60 font-poppins text-sm resize-none focus:outline-none focus:border-sentry-accent transition-colors"
             rows={2}
-            disabled={isLoading}
+            disabled={isLoading || streamingMessageId !== null}
           />
         </div>
         <button
           onClick={handleSendMessage}
-          disabled={!inputMessage.trim() || isLoading}
-          className="bg-sentry-accent text-white p-3 rounded-xl hover:bg-sentry-accent/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+          disabled={!inputMessage.trim() || isLoading || streamingMessageId !== null}
+          className="bg-sentry-accent text-white px-6 rounded-xl hover:bg-sentry-accent/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
         >
           <Send className="w-5 h-5" />
         </button>
