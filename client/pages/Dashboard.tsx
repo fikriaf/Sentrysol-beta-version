@@ -39,12 +39,14 @@ export default function Dashboard() {
     const analysisAddress = addressToAnalyze || publicKey?.toString();
     if (!analysisAddress) return;
 
+    const startTime = Date.now();
+    setAnalysisStartTime(startTime);
+
     setIsAnalyzing(true);
     setProgress(0);
     setLogs([]);
     setAnalysisData(null);
     setTargetAddress(analysisAddress);
-    setAnalysisStartTime(Date.now());
 
     // Set overall analysis timeout (10 minutes)
     const overallTimeout = setTimeout(() => {
@@ -99,7 +101,8 @@ export default function Dashboard() {
         keepAliveInterval = setInterval(() => {
           if (eventSource.readyState === 1) {
             const timeSinceActivity = Date.now() - lastActivityTime;
-            const totalAnalysisTime = Date.now() - analysisStartTime;
+            // FIX: Use startTime instead of analysisStartTime
+            const totalAnalysisTime = Date.now() - startTime;
 
             if (timeSinceActivity > 120000) {
               setLogs(prev => [...prev, 'Connection timeout - no activity for 2 minutes']);
@@ -112,7 +115,7 @@ export default function Dashboard() {
               setLogs(prev => [...prev, `No activity for ${Math.floor(timeSinceActivity / 1000)}s (timeout in ${remainingTime}s)`]);
             }
 
-            // FIX: Show total analysis time every minute - PERBAIKI BAGIAN INI
+            // FIX: Use startTime for total analysis time
             if (totalAnalysisTime > 120000 && Math.floor(totalAnalysisTime / 120000) !== Math.floor((totalAnalysisTime - 30000) / 120000)) {
               const minutes = Math.floor(totalAnalysisTime / 60000);
               const seconds = Math.floor((totalAnalysisTime % 60000) / 1000);
@@ -123,10 +126,11 @@ export default function Dashboard() {
         console.log('analysisStartTime:', analysisStartTime);
         // Connection health checker with timeout handling
         connectionCheckInterval = setInterval(() => {
-          if (eventSource.readyState === 2 && !isManuallyStoped) { // Connection closed
-            const timeSinceStart = Date.now() - analysisStartTime;
+          if (eventSource.readyState === 2 && !isManuallyStoped) {
+            // FIX: Use startTime instead of analysisStartTime
+            const timeSinceStart = Date.now() - startTime;
 
-            if (timeSinceStart > 8 * 60 * 1000) { // Don't reconnect after 8 minutes
+            if (timeSinceStart > 8 * 60 * 1000) {
               setLogs(prev => [...prev, 'Maximum analysis time reached - not reconnecting']);
               cleanup();
               setIsAnalyzing(false);
@@ -159,7 +163,8 @@ export default function Dashboard() {
 
           // Handle completion
           if (event.data === '[DONE]') {
-            const totalTime = Math.floor((Date.now() - analysisStartTime) / 1000);
+            // FIX: Use startTime variable instead of state
+            const totalTime = Math.floor((Date.now() - startTime) / 1000);
             setLogs(prev => [...prev, `Analysis completed successfully in ${totalTime}s!`]);
             cleanup();
             setIsAnalyzing(false);
@@ -190,7 +195,8 @@ export default function Dashboard() {
             if (data.status) {
               const stepInfo = data.step ? `Step ${data.step}: ` : '';
               const progressInfo = data.progress !== undefined ? ` (${data.progress}%)` : '';
-              const elapsedSeconds = Math.floor((Date.now() - analysisStartTime) / 1000);
+              // FIX: Use startTime variable instead of analysisStartTime state
+              const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
               const timeInfo = ` [${elapsedSeconds}s]`;
               setLogs(prev => [...prev, `${stepInfo}${data.status}${progressInfo}${timeInfo}`]);
 
@@ -365,6 +371,21 @@ export default function Dashboard() {
     };
   };
 
+  const [displayElapsedTime, setDisplayElapsedTime] = useState(0);
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isAnalyzing && analysisStartTime > 0) {
+      interval = setInterval(() => {
+        setDisplayElapsedTime(Math.floor((Date.now() - analysisStartTime) / 1000));
+      }, 1000);
+    } else {
+      setDisplayElapsedTime(0);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isAnalyzing, analysisStartTime]);
+
   const getThreatCardBorderColor = (confidence: string) => {
     switch (confidence?.toLowerCase()) {
       case 'high':
@@ -537,7 +558,7 @@ export default function Dashboard() {
                     <span className="text-white/70 font-poppins">Analysis Progress</span>
                     <div className="flex items-center gap-4">
                       <span className="text-white/60 font-poppins text-sm">
-                        {analysisStartTime > 0 ? Math.floor((Date.now() - analysisStartTime) / 1000) : 0}s elapsed
+                        {displayElapsedTime}s elapsed
                       </span>
                       <span className="text-white font-poppins">{progress}%</span>
                     </div>
