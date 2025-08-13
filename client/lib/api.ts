@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://sentrysol-beta-production.up.railway.app';
 
 export interface AnalysisData {
   progress: number;
