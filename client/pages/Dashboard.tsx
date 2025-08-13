@@ -112,14 +112,14 @@ export default function Dashboard() {
               return;
             } else if (timeSinceActivity > 60000) {
               const remainingTime = Math.ceil((120000 - timeSinceActivity) / 1000);
-              setLogs(prev => [...prev, `No activity for ${Math.floor(timeSinceActivity / 1000)}s (timeout in ${remainingTime}s)`]);
+              setLogs(prev => [...prev, `No activity for ${Math.floor(timeSinceActivity / 1000)}ms (timeout in ${remainingTime}ms)`]);
             }
 
             // FIX: Use startTime for total analysis time
             if (totalAnalysisTime > 120000 && Math.floor(totalAnalysisTime / 120000) !== Math.floor((totalAnalysisTime - 30000) / 120000)) {
               const minutes = Math.floor(totalAnalysisTime / 60000);
               const seconds = Math.floor((totalAnalysisTime % 60000) / 1000);
-              setLogs(prev => [...prev, `Analysis running for ${minutes}m ${seconds}s...`]);
+              setLogs(prev => [...prev, `Analysis running for ${minutes}m ${seconds}ms...`]);
             }
           }
         }, 30000);
@@ -165,7 +165,7 @@ export default function Dashboard() {
           if (event.data === '[DONE]') {
             // FIX: Use startTime variable instead of state
             const totalTime = Math.floor((Date.now() - startTime) / 1000);
-            setLogs(prev => [...prev, `Analysis completed successfully in ${totalTime}s!`]);
+            setLogs(prev => [...prev, `Analysis completed successfully in ${totalTime}ms!`]);
             cleanup();
             setIsAnalyzing(false);
             setProgress(100);
@@ -197,7 +197,7 @@ export default function Dashboard() {
               const progressInfo = data.progress !== undefined ? ` (${data.progress}%)` : '';
               // FIX: Use startTime variable instead of analysisStartTime state
               const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
-              const timeInfo = ` [${elapsedSeconds}s]`;
+              const timeInfo = ` [${elapsedSeconds}ms]`;
               setLogs(prev => [...prev, `${stepInfo}${data.status}${progressInfo}${timeInfo}`]);
 
               // Special message for AI analysis
@@ -558,7 +558,7 @@ export default function Dashboard() {
                     <span className="text-white/70 font-poppins">Analysis Progress</span>
                     <div className="flex items-center gap-4">
                       <span className="text-white/60 font-poppins text-sm">
-                        {displayElapsedTime}s elapsed
+                        {displayElapsedTime}ms elapsed
                       </span>
                       <span className="text-white font-poppins">{progress}%</span>
                     </div>
