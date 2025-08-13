@@ -165,7 +165,7 @@ export default function Dashboard() {
           if (event.data === '[DONE]') {
             // FIX: Use startTime variable instead of state
             const totalTime = Math.floor((Date.now() - startTime) / 1000);
-            setLogs(prev => [...prev, `Analysis completed successfully in ${totalTime}ms!`]);
+            setLogs(prev => [...prev, `Analysis completed successfully in ${totalTime}s!`]);
             cleanup();
             setIsAnalyzing(false);
             setProgress(100);
