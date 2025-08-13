@@ -119,8 +119,10 @@ export default function Dashboard() {
             if (totalAnalysisTime > 120000 && Math.floor(totalAnalysisTime / 120000) !== Math.floor((totalAnalysisTime - 30000) / 120000)) {
               const minutes = Math.floor(totalAnalysisTime / 60000);
               const seconds = Math.floor((totalAnalysisTime % 60000) / 1000);
-              setLogs(prev => [...prev, `Analysis running for ${minutes}m ${seconds}s...`]);
+              const ms = totalAnalysisTime % 1000;
+              setLogs(prev => [...prev, `Analysis running for ${minutes}m ${seconds}s ${ms}ms...`]);
             }
+
           }
         }, 30000);
         console.log('analysisStartTime:', analysisStartTime);
@@ -163,9 +165,8 @@ export default function Dashboard() {
 
           // Handle completion
           if (event.data === '[DONE]') {
-            // FIX: Use startTime variable instead of state
-            const totalTime = Math.floor((Date.now() - startTime) / 1000);
-            setLogs(prev => [...prev, `Analysis completed successfully in ${totalTime}s!`]);
+            const totalTime = Date.now() - startTime; // Hapus pembagian 1000
+            setLogs(prev => [...prev, `Analysis completed successfully in ${totalTime}ms!`]);
             cleanup();
             setIsAnalyzing(false);
             setProgress(100);
@@ -195,9 +196,8 @@ export default function Dashboard() {
             if (data.status) {
               const stepInfo = data.step ? `Step ${data.step}: ` : '';
               const progressInfo = data.progress !== undefined ? ` (${data.progress}%)` : '';
-              // FIX: Use startTime variable instead of analysisStartTime state
-              const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
-              const timeInfo = ` [${elapsedSeconds}s]`;
+              const elapsedMs = Date.now() - startTime; // Hapus pembagian 1000
+              const timeInfo = ` [${elapsedMs}ms]`;
               setLogs(prev => [...prev, `${stepInfo}${data.status}${progressInfo}${timeInfo}`]);
 
               // Special message for AI analysis
@@ -376,8 +376,8 @@ export default function Dashboard() {
     let interval: NodeJS.Timeout;
     if (isAnalyzing && analysisStartTime > 0) {
       interval = setInterval(() => {
-        setDisplayElapsedTime(Math.floor((Date.now() - analysisStartTime) / 1000));
-      }, 1000);
+        setDisplayElapsedTime(Date.now() - analysisStartTime); // Hapus pembagian 1000
+      }, 100); // Update setiap 100ms untuk real-time
     } else {
       setDisplayElapsedTime(0);
     }
@@ -558,7 +558,7 @@ export default function Dashboard() {
                     <span className="text-white/70 font-poppins">Analysis Progress</span>
                     <div className="flex items-center gap-4">
                       <span className="text-white/60 font-poppins text-sm">
-                        {displayElapsedTime}s elapsed
+                        {displayElapsedTime}ms elapsed
                       </span>
                       <span className="text-white font-poppins">{progress}%</span>
                     </div>
