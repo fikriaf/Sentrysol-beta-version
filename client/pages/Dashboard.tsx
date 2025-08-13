@@ -97,28 +97,29 @@ export default function Dashboard() {
 
                 // Enhanced keep alive checker with connection timeout
                 keepAliveInterval = setInterval(() => {
-                    if (eventSource.readyState === 1) {
-                        const timeSinceActivity = Date.now() - lastActivityTime;
-                        const totalAnalysisTime = Date.now() - analysisStartTime;
-                        
-                        if (timeSinceActivity > 120000) { // 2 minutes without activity = timeout
-                            setLogs(prev => [...prev, 'Connection timeout - no activity for 2 minutes']);
-                            setLogs(prev => [...prev, '❌ Closing connection due to timeout']);
-                            cleanup();
-                            setIsAnalyzing(false);
-                            return;
-                        } else if (timeSinceActivity > 60000) { // 1 minute warning
-                            const remainingTime = Math.ceil((120000 - timeSinceActivity) / 1000);
-                            setLogs(prev => [...prev, `No activity for ${Math.floor(timeSinceActivity/1000)}s (timeout in ${remainingTime}s)`]);
-                        }
-                        
-                        // Show total analysis time every minute
-                        if (totalAnalysisTime > 60000 && totalAnalysisTime % 60000 < 30000) {
-                            const minutes = Math.floor(totalAnalysisTime / 60000);
-                            setLogs(prev => [...prev, `Analysis running for ${minutes} minute(s)...`]);
-                        }
+                  if (eventSource.readyState === 1) {
+                    const timeSinceActivity = Date.now() - lastActivityTime;
+                    const totalAnalysisTime = Date.now() - analysisStartTime;
+
+                    if (timeSinceActivity > 120000) {
+                      setLogs(prev => [...prev, 'Connection timeout - no activity for 2 minutes']);
+                      setLogs(prev => [...prev, '❌ Closing connection due to timeout']);
+                      cleanup();
+                      setIsAnalyzing(false);
+                      return;
+                    } else if (timeSinceActivity > 60000) {
+                      const remainingTime = Math.ceil((120000 - timeSinceActivity) / 1000);
+                      setLogs(prev => [...prev, `No activity for ${Math.floor(timeSinceActivity / 1000)}s (timeout in ${remainingTime}s)`]);
                     }
-                }, 30000); // Check every 30 seconds
+
+                    // FIX: Show total analysis time every minute - PERBAIKI BAGIAN INI
+                    if (totalAnalysisTime > 60000 && totalAnalysisTime % 60000 < 30000) {
+                      const minutes = Math.floor(totalAnalysisTime / 60000);
+                      const seconds = Math.floor((totalAnalysisTime % 60000) / 1000);
+                      setLogs(prev => [...prev, `Analysis running for ${minutes}m ${seconds}s...`]);
+                    }
+                  }
+                }, 30000);
 
                 // Connection health checker with timeout handling
                 connectionCheckInterval = setInterval(() => {
