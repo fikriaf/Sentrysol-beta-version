@@ -123,7 +123,7 @@ export default function Dashboard() {
             }
           }
         }, 30000);
-        console.log('analysisStartTime:', analysisStartTime);
+
         // Connection health checker with timeout handling
         connectionCheckInterval = setInterval(() => {
           if (eventSource.readyState === 2 && !isManuallyStoped) {
@@ -152,20 +152,18 @@ export default function Dashboard() {
         }, 5000); // Check every 5 seconds
 
         eventSource.onopen = function (event) {
-          console.log('EventSource connection opened:', event);
           setLogs(prev => [...prev, '✅ Successfully connected to analysis stream']);
           lastActivityTime = Date.now();
         };
 
         eventSource.onmessage = function (event) {
           lastActivityTime = Date.now(); // Reset activity timer
-          console.log('EventSource message received:', event.data);
 
           // Handle completion
           if (event.data === '[DONE]') {
             // FIX: Use startTime variable instead of state
             const totalTime = Math.floor((Date.now() - startTime) / 1000);
-            setLogs(prev => [...prev, `Analysis completed successfully in ${totalTime}ms!`]);
+            setLogs(prev => [...prev, `Analysis completed successfully in ${totalTime}s!`]);
             cleanup();
             setIsAnalyzing(false);
             setProgress(100);
@@ -201,15 +199,15 @@ export default function Dashboard() {
               setLogs(prev => [...prev, `${stepInfo}${data.status}${progressInfo}${timeInfo}`]);
 
               // Special message for AI analysis
-              if (data.step === 7 || data.progress >= 95) {
-                setLogs(prev => [...prev, 'AI analysis is running - this process takes time...']);
+              if (data.step === 7 && data.progress >= 95) {
+                setLogs(prev => [...prev, 'SentrySol-Core analysis is running - this process takes time...']);
               }
             }
 
             // Handle analysis result data
             if (data.data || data.analysis_result || data.detailed_data || data.transaction_graph || data.threat_analysis) {
               const finalData = data.data || data;
-              console.log('Setting analysis data:', finalData);
+
               setAnalysisData(finalData);
 
               if (finalData.analysis_result || finalData.detailed_data) {
