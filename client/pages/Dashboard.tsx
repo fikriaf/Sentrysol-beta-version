@@ -59,7 +59,7 @@ export default function Dashboard() {
             const analyzeUrl = `${backendUrl}/analyze/${analysisAddress}`;
 
             console.log('Attempting to connect to:', analyzeUrl);
-            setLogs(prev => [...prev, `Connecting to SentrySol-Core`]);
+            setLogs(prev => [...prev, `Connecting to: ${analyzeUrl}`]);
 
             // First check if backend is available
             try {
@@ -191,7 +191,8 @@ export default function Dashboard() {
                         if (data.status) {
                             const stepInfo = data.step ? `Step ${data.step}: ` : '';
                             const progressInfo = data.progress !== undefined ? ` (${data.progress}%)` : '';
-                            const timeInfo = ` [${Math.floor((Date.now() - analysisStartTime) / 1000)}s]`;
+                            const elapsedSeconds = Math.floor((Date.now() - analysisStartTime) / 1000);
+                            const timeInfo = ` [${elapsedSeconds}s]`;
                             setLogs(prev => [...prev, `${stepInfo}${data.status}${progressInfo}${timeInfo}`]);
                             
                             // Special message for AI analysis
