@@ -59,7 +59,7 @@ export default function Dashboard() {
             const analyzeUrl = `${backendUrl}/analyze/${analysisAddress}`;
 
             console.log('Attempting to connect to:', analyzeUrl);
-            setLogs(prev => [...prev, `Connecting to: ${analyzeUrl}`]);
+            setLogs(prev => [...prev, `Connecting to SentrySol-Core`]);
 
             // First check if backend is available
             try {
