@@ -330,7 +330,7 @@ IMPORTANT INSTRUCTIONS:
             const stepInfo = data.step ? `Step ${data.step}: ` : '';
             const progressInfo = data.progress !== undefined ? ` (${data.progress}%)` : '';
             const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
-            const timeInfo = ` [${elapsedSeconds}s]`;
+            const timeInfo = ` [${elapsedSeconds}ms]`;
 
             const logEntry = `${stepInfo}${data.status}${progressInfo}${timeInfo}`;
             setAnalysisLogs(prev => [...prev, logEntry]);
@@ -340,7 +340,7 @@ IMPORTANT INSTRUCTIONS:
               msg.id === messageId
                 ? {
                   ...msg,
-                  content: `🔍 **Deep Analysis:** \`${address}\`\n\n**Progress:** ${data.progress || 0}%\n\n**Latest:** ${data.status}\n\n⏱️ **Elapsed Time:** ${elapsedSeconds}s`
+                  content: `🔍 **Deep Analysis:** \`${address}\`\n\n**Progress:** ${data.progress || 0}%\n\n**Latest:** ${data.status}\n\n⏱️ **Elapsed Time:** ${elapsedSeconds}ms`
                 }
                 : msg
             ));
