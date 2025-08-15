@@ -50,7 +50,7 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ onAddressAnalyze, isAnalyzing 
   const streamChatWithMistral = async (message: string, messageId: string) => {
     try {
       const backendUrl = import.meta.env.DEV ? 'https://sentrysol-beta-production.up.railway.app' : window.location.origin;
-      
+
       const response = await fetch(`${backendUrl}/chat-sentrysol-stream`, {
         method: 'POST',
         headers: {
@@ -89,17 +89,17 @@ IMPORTANT INSTRUCTIONS:
       let isStreamComplete = false;
 
       // Update message to show streaming
-      setMessages(prev => prev.map(msg => 
-        msg.id === messageId 
+      setMessages(prev => prev.map(msg =>
+        msg.id === messageId
           ? { ...msg, content: '🤖 Thinking...', isStreaming: true }
           : msg
       ));
 
       while (!isStreamComplete) {
         const { done, value } = await reader.read();
-        
+
         if (done) break;
-        
+
         const chunk = new TextDecoder().decode(value);
         buffer += chunk;
 
@@ -110,7 +110,7 @@ IMPORTANT INSTRUCTIONS:
         for (const line of lines) {
           if (line.startsWith('data: ')) {
             const data = line.slice(6).trim();
-            
+
             if (data === '[DONE]') {
               isStreamComplete = true;
               break;
@@ -118,11 +118,11 @@ IMPORTANT INSTRUCTIONS:
 
             try {
               const jsonData = JSON.parse(data);
-              
+
               // Handle status messages
               if (jsonData.status) {
-                setMessages(prev => prev.map(msg => 
-                  msg.id === messageId 
+                setMessages(prev => prev.map(msg =>
+                  msg.id === messageId
                     ? { ...msg, content: `🤖 ${jsonData.message || jsonData.status}`, isStreaming: true }
                     : msg
                 ));
@@ -132,10 +132,10 @@ IMPORTANT INSTRUCTIONS:
               // Handle content streaming
               if (jsonData.type === 'content' && jsonData.content !== undefined) {
                 streamingContent += jsonData.content;
-                
+
                 // Update streaming message with accumulated content
-                setMessages(prev => prev.map(msg => 
-                  msg.id === messageId 
+                setMessages(prev => prev.map(msg =>
+                  msg.id === messageId
                     ? { ...msg, content: streamingContent || '🤖 Processing...', isStreaming: true }
                     : msg
                 ));
@@ -144,7 +144,7 @@ IMPORTANT INSTRUCTIONS:
               // Handle completion
               if (jsonData.type === 'done') {
                 isStreamComplete = true;
-                
+
                 // Try to parse the accumulated content for address detection
                 try {
                   // Check if the entire response is a JSON object
@@ -176,13 +176,13 @@ IMPORTANT INSTRUCTIONS:
 
       // Finalize the message
       const finalContent = streamingContent || 'I apologize, but I encountered an issue processing your request.';
-      setMessages(prev => prev.map(msg => 
-        msg.id === messageId 
-          ? { 
-              ...msg, 
-              content: finalContent,
-              isStreaming: false
-            }
+      setMessages(prev => prev.map(msg =>
+        msg.id === messageId
+          ? {
+            ...msg,
+            content: finalContent,
+            isStreaming: false
+          }
           : msg
       ));
 
@@ -193,31 +193,31 @@ IMPORTANT INSTRUCTIONS:
 
     } catch (error) {
       console.error('Chat streaming error:', error);
-      
+
       // Update message with error
-      setMessages(prev => prev.map(msg => 
-        msg.id === messageId 
-          ? { 
-              ...msg, 
-              content: `❌ **Connection Error**\n\nUnable to connect to SentrySol AI. Please check your connection and try again.`,
-              isStreaming: false
-            }
+      setMessages(prev => prev.map(msg =>
+        msg.id === messageId
+          ? {
+            ...msg,
+            content: `❌ **Connection Error**\n\nUnable to connect to SentrySol AI. Please check your connection and try again.`,
+            isStreaming: false
+          }
           : msg
       ));
-      
+
       throw error;
     }
   };
 
   // Function to start streaming analysis
   const startStreamingAnalysis = async (address: string, messageId: string) => {
-    const backendUrl = import.meta.env.DEV ? 'https://sentrysol-beta-production.up.railway.app' : window.location.origin;
+    const backendUrl = import.meta.env.DEV ? 'http://localhost:8000' : window.location.origin;
     const analyzeUrl = `${backendUrl}/analyze/${address}`;
-    
+
     setStreamingMessageId(messageId);
     setAnalysisLogs([]);
     setAnalysisProgress(0);
-    
+
     const startTime = Date.now();
     let eventSource: EventSource;
     let lastActivityTime = Date.now();
@@ -227,9 +227,9 @@ IMPORTANT INSTRUCTIONS:
 
     // Add initial streaming status
     const streamingMessage = `🔍 **Starting Deep Analysis for Address:** \`${address}\`\n\n⏳ Connecting to SentrySol-Core...`;
-    
-    setMessages(prev => prev.map(msg => 
-      msg.id === messageId 
+
+    setMessages(prev => prev.map(msg =>
+      msg.id === messageId
         ? { ...msg, content: streamingMessage, isStreaming: true }
         : msg
     ));
@@ -294,18 +294,18 @@ IMPORTANT INSTRUCTIONS:
         if (event.data === '[DONE]') {
           const totalTime = Math.floor((Date.now() - startTime) / 1000);
           setAnalysisLogs(prev => [...prev, `✅ Analysis completed in ${totalTime}s!`]);
-          
+
           // Update the message to show completion
-          setMessages(prev => prev.map(msg => 
-            msg.id === messageId 
-              ? { 
-                  ...msg, 
-                  isStreaming: false,
-                  content: msg.content + '\n\n✅ **Deep Analysis Complete!**'
-                }
+          setMessages(prev => prev.map(msg =>
+            msg.id === messageId
+              ? {
+                ...msg,
+                isStreaming: false,
+                content: msg.content + '\n\n✅ **Deep Analysis Complete!**'
+              }
               : msg
           ));
-          
+
           cleanup();
           setStreamingMessageId(null);
           return;
@@ -331,39 +331,39 @@ IMPORTANT INSTRUCTIONS:
             const progressInfo = data.progress !== undefined ? ` (${data.progress}%)` : '';
             const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
             const timeInfo = ` [${elapsedSeconds}s]`;
-            
+
             const logEntry = `${stepInfo}${data.status}${progressInfo}${timeInfo}`;
             setAnalysisLogs(prev => [...prev, logEntry]);
-            
+
             // Update streaming message with latest log
-            setMessages(prev => prev.map(msg => 
-              msg.id === messageId 
-                ? { 
-                    ...msg, 
-                    content: `🔍 **Deep Analysis:** \`${address}\`\n\n**Progress:** ${data.progress || 0}%\n\n**Latest:** ${data.status}\n\n⏱️ **Elapsed Time:** ${elapsedSeconds}s`
-                  }
+            setMessages(prev => prev.map(msg =>
+              msg.id === messageId
+                ? {
+                  ...msg,
+                  content: `🔍 **Deep Analysis:** \`${address}\`\n\n**Progress:** ${data.progress || 0}%\n\n**Latest:** ${data.status}\n\n⏱️ **Elapsed Time:** ${elapsedSeconds}s`
+                }
                 : msg
             ));
           }
 
           if (data.data || data.analysis_result || data.detailed_data || data.transaction_graph || data.threat_analysis) {
             const finalData = data.data || data;
-            
+
             // Update message with analysis results
             const analysisResult = parseAnalysisResult(finalData);
             const formattedResult = formatAnalysisForChat(analysisResult, address);
-            
-            setMessages(prev => prev.map(msg => 
-              msg.id === messageId 
-                ? { 
-                    ...msg, 
-                    content: formattedResult,
-                    analysisData: finalData,
-                    isStreaming: false
-                  }
+
+            setMessages(prev => prev.map(msg =>
+              msg.id === messageId
+                ? {
+                  ...msg,
+                  content: formattedResult,
+                  analysisData: finalData,
+                  isStreaming: false
+                }
                 : msg
             ));
-            
+
             setAnalysisLogs(prev => [...prev, 'Analysis results received and processed']);
           }
 
@@ -429,7 +429,7 @@ IMPORTANT INSTRUCTIONS:
       if (threatAnalysis) {
         const riskScore = threatAnalysis.risk_score || 0;
         const riskLevel = threatAnalysis.overall_risk_level || 'UNKNOWN';
-        
+
         formattedResult += `🛡️ **Risk Assessment**\n`;
         formattedResult += `• **Risk Level:** ${riskLevel}\n`;
         formattedResult += `• **Risk Score:** ${riskScore}/100\n\n`;
@@ -518,15 +518,15 @@ IMPORTANT INSTRUCTIONS:
       timestamp: new Date(),
       isStreaming: true
     };
-    
+
     setMessages(prev => [...prev, botMessage]);
 
     try {
       // Stream chat with Mistral
       const mistralResult = await streamChatWithMistral(currentInput, botMessageId);
-      
+
       setIsLoading(false);
-      
+      console.log(mistralResult)
       // If address detected, start deep analysis
       if (mistralResult.detectedAddress) {
         // Show analysis announcement
@@ -537,9 +537,9 @@ IMPORTANT INSTRUCTIONS:
           content: `🚀 **Initiating Deep Security Analysis**\n\nI've detected the address: \`${mistralResult.detectedAddress}\`\n\nStarting comprehensive analysis including:\n• Behavioral pattern analysis\n• Risk assessment\n• Network graph generation\n• Threat intelligence scan`,
           timestamp: new Date()
         };
-        
+
         setMessages(prev => [...prev, analysisAnnouncement]);
-        
+
         // Create streaming analysis message
         const streamingAnalysisId = (Date.now() + 3).toString();
         const streamingAnalysisMessage: ChatMessage = {
@@ -549,9 +549,9 @@ IMPORTANT INSTRUCTIONS:
           timestamp: new Date(),
           isStreaming: true
         };
-        
+
         setMessages(prev => [...prev, streamingAnalysisMessage]);
-        
+
         // Start streaming analysis after short delay
         setTimeout(() => {
           startStreamingAnalysis(mistralResult.detectedAddress!, streamingAnalysisId);
@@ -562,7 +562,7 @@ IMPORTANT INSTRUCTIONS:
       console.error('Chat error:', error);
 
       let errorContent = '❌ **Connection Error**\n\n';
-      
+
       if (error.message.includes('Failed to fetch') || error.message.includes('timeout')) {
         errorContent += 'Unable to connect to SentrySol AI services. Please check:\n\n';
         errorContent += '• Backend server is running\n';
@@ -575,12 +575,12 @@ IMPORTANT INSTRUCTIONS:
       }
 
       // Update the streaming message with error
-      setMessages(prev => prev.map (msg => 
-        msg.id === botMessageId 
+      setMessages(prev => prev.map(msg =>
+        msg.id === botMessageId
           ? { ...msg, content: errorContent, isStreaming: false }
           : msg
       ));
-      
+
       setIsLoading(false);
     }
   };
@@ -634,11 +634,10 @@ IMPORTANT INSTRUCTIONS:
           >
             <div className={`max-w-[85%] ${message.type === 'user' ? 'order-2' : 'order-1'}`}>
               <div
-                className={`p-3 rounded-2xl ${
-                  message.type === 'user'
+                className={`p-3 rounded-2xl ${message.type === 'user'
                     ? 'bg-sentry-sage text-black ml-2'
                     : 'bg-black/20 text-white mr-2'
-                }`}
+                  }`}
               >
                 <div className="flex items-start gap-2">
                   {message.type === 'bot' && (
@@ -725,7 +724,7 @@ IMPORTANT INSTRUCTIONS:
                         {message.content}
                       </ReactMarkdown>
                     </div>
-                    
+
                     {/* Streaming indicator for regular chat */}
                     {message.isStreaming && !message.analysisData && streamingMessageId !== message.id && (
                       <div className="mt-2 flex items-center gap-2">
@@ -737,22 +736,22 @@ IMPORTANT INSTRUCTIONS:
                         <span className="text-white/60 font-poppins text-xs">AI is thinking...</span>
                       </div>
                     )}
-                    
+
                     {/* Streaming Progress for analysis */}
-                    {message.isStreaming && streamingMessageId === message.id && (
+                    {streamingMessageId === message.id && (
                       <div className="mt-3 p-3 bg-black/20 rounded-xl border border-white/10">
                         <div className="flex items-center gap-2 mb-2">
                           <Activity className="w-4 h-4 text-sentry-accent animate-spin" />
                           <span className="text-white/70 font-poppins text-xs">Live Deep Analysis</span>
                         </div>
-                        
+
                         <div className="w-full bg-black/20 rounded-full h-2 mb-2">
                           <div
                             className="bg-gradient-to-r from-sentry-sage to-sentry-accent h-2 rounded-full transition-all duration-500"
                             style={{ width: `${analysisProgress}%` }}
                           ></div>
                         </div>
-                        
+
                         {analysisLogs.length > 0 && (
                           <div className="max-h-20 overflow-y-auto">
                             {analysisLogs.slice(-3).map((log, index) => (
@@ -764,7 +763,7 @@ IMPORTANT INSTRUCTIONS:
                         )}
                       </div>
                     )}
-                    
+
                     {/* Analysis Results Actions */}
                     {message.analysisData && !message.isStreaming && (
                       <div className="mt-3 p-3 bg-black/20 rounded-xl border border-white/10">
@@ -772,8 +771,8 @@ IMPORTANT INSTRUCTIONS:
                           <span className="text-white/70 font-poppins text-xs">Full Analysis Available</span>
                           <button
                             onClick={() => {
-                              const address = message.analysisData.detailed_data?.wallet_info?.address || 
-                                            message.analysisData.metadata?.target_address;
+                              const address = message.analysisData.detailed_data?.wallet_info?.address ||
+                                message.analysisData.metadata?.target_address;
                               if (address) {
                                 handleQuickAnalyze(address);
                               }
@@ -794,7 +793,7 @@ IMPORTANT INSTRUCTIONS:
             </div>
           </div>
         ))}
-        
+
         {isLoading && (
           <div className="flex justify-start">
             <div className="bg-black/20 text-white p-3 rounded-2xl mr-2">
@@ -805,7 +804,7 @@ IMPORTANT INSTRUCTIONS:
             </div>
           </div>
         )}
-        
+
         <div ref={messagesEndRef} />
       </div>
 
