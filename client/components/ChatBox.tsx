@@ -211,7 +211,7 @@ IMPORTANT INSTRUCTIONS:
 
   // Function to start streaming analysis
   const startStreamingAnalysis = async (address: string, messageId: string) => {
-    const backendUrl = import.meta.env.DEV ? 'http://localhost:8000' : window.location.origin;
+    const backendUrl = import.meta.env.DEV ? 'https://sentrysol-beta-production.up.railway.app' : window.location.origin;
     const analyzeUrl = `${backendUrl}/analyze/${address}`;
 
     setStreamingMessageId(messageId);
