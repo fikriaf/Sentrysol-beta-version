@@ -658,12 +658,15 @@ IMPORTANT INSTRUCTIONS:
                             className?: string;
                             children?: React.ReactNode;
                           }) => {
-                            return inline ? (
-                              <code className="bg-black/30 text-sentry-sage px-1.5 py-0.5 rounded text-xs font-mono">
+                            const textContent = String(children);
+                            const shouldBeBlock = !inline && (textContent.length > 30 || textContent.includes('\n'));
+
+                            return shouldBeBlock ? (
+                              <code className="block bg-black/30 p-2 rounded-lg text-white/90 font-mono text-xs overflow-x-auto my-1 whitespace-pre-wrap break-words max-w-full">
                                 {children}
                               </code>
                             ) : (
-                              <code className="block bg-black/30 p-2 rounded-lg text-white/90 font-mono text-xs overflow-x-auto my-1 whitespace-pre-wrap break-words max-w-full">
+                              <code className="bg-black/30 text-sentry-sage px-1.5 py-0.5 rounded text-xs font-mono">
                                 {children}
                               </code>
                             );
