@@ -691,7 +691,7 @@ export default function Dashboard() {
                                         </span>
                                       </div>
 
-                                      <p className="text-white/80 font-poppins mb-4 leading-relaxed">
+                                      <p className="text-white/80 font-poppins mb-4 leading-relaxed break-words">
                                         {threat.reason}
                                       </p>
 

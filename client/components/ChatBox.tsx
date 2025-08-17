@@ -211,7 +211,7 @@ IMPORTANT INSTRUCTIONS:
 
   // Function to start streaming analysis
   const startStreamingAnalysis = async (address: string, messageId: string) => {
-    const backendUrl = import.meta.env.DEV ? 'https://sentrysol-beta-production.up.railway.app' : window.location.origin;
+    const backendUrl = import.meta.env.DEV ? 'http://localhost:8000' : window.location.origin;
     const analyzeUrl = `${backendUrl}/analyze/${address}`;
     
     setStreamingMessageId(messageId);
@@ -330,7 +330,7 @@ IMPORTANT INSTRUCTIONS:
             const stepInfo = data.step ? `Step ${data.step}: ` : '';
             const progressInfo = data.progress !== undefined ? ` (${data.progress}%)` : '';
             const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
-            const timeInfo = ` [${elapsedSeconds}s]`;
+            const timeInfo = ` [${elapsedSeconds}ms]`;
             
             const logEntry = `${stepInfo}${data.status}${progressInfo}${timeInfo}`;
             setAnalysisLogs(prev => [...prev, logEntry]);
@@ -340,7 +340,7 @@ IMPORTANT INSTRUCTIONS:
               msg.id === messageId 
                 ? { 
                     ...msg, 
-                    content: `🔍 **Deep Analysis:** \`${address}\`\n\n**Progress:** ${data.progress || 0}%\n\n**Latest:** ${data.status}\n\n⏱️ **Elapsed Time:** ${elapsedSeconds}s`
+                    content: `🔍 **Deep Analysis:** \`${address}\`\n\n**Progress:** ${data.progress || 0}%\n\n**Latest:** ${data.status}\n\n⏱️ **Elapsed Time:** ${elapsedSeconds}ms`
                   }
                 : msg
             ));
@@ -526,7 +526,7 @@ IMPORTANT INSTRUCTIONS:
       const mistralResult = await streamChatWithMistral(currentInput, botMessageId);
       
       setIsLoading(false);
-      
+      console.log(mistralResult)
       // If address detected, start deep analysis
       if (mistralResult.detectedAddress) {
         // Show analysis announcement
@@ -659,12 +659,15 @@ IMPORTANT INSTRUCTIONS:
                             className?: string;
                             children?: React.ReactNode;
                           }) => {
-                            return inline ? (
-                              <code className="bg-black/30 text-sentry-sage px-1.5 py-0.5 rounded text-xs font-mono">
+                            const textContent = String(children);
+                            const shouldBeBlock = !inline && (textContent.length > 30 || textContent.includes('\n'));
+                            
+                            return shouldBeBlock ? (
+                              <code className="block bg-black/30 p-2 rounded-lg text-white/90 font-mono text-xs overflow-x-auto my-1 whitespace-pre-wrap break-words max-w-full">
                                 {children}
                               </code>
                             ) : (
-                              <code className="block bg-black/30 p-2 rounded-lg text-white/90 font-mono text-xs overflow-x-auto my-1 whitespace-pre-wrap break-words max-w-full">
+                              <code className="bg-black/30 text-sentry-sage px-1.5 py-0.5 rounded text-xs font-mono">
                                 {children}
                               </code>
                             );
@@ -739,7 +742,7 @@ IMPORTANT INSTRUCTIONS:
                     )}
                     
                     {/* Streaming Progress for analysis */}
-                    {message.isStreaming && streamingMessageId === message.id && (
+                    {streamingMessageId === message.id && (
                       <div className="mt-3 p-3 bg-black/20 rounded-xl border border-white/10">
                         <div className="flex items-center gap-2 mb-2">
                           <Activity className="w-4 h-4 text-sentry-accent animate-spin" />
